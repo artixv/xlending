@@ -94,6 +94,7 @@ contract lendingManager  {
                                 uint8 _lendingModeNum,
                                 uint _homogeneousModeLTV,
                                 uint _bestDepositInterestRate) ;
+    event UserModeSetting(address indexed user,uint8 _mode,address _userRIMAssetsAddress);
     //------------------------------------------------------------------
 
     constructor() {
@@ -197,10 +198,15 @@ contract lendingManager  {
                                  _bestDepositInterestRate) ;
     }
 
-    function userModeSetting(uint8 _mode,address _userRIMAssetsAddress) public {
-        require(userTotalLendingValue(msg.sender) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
-        userMode[msg.sender] = _mode;
-        userRIMAssetsAddress[msg.sender] = _userRIMAssetsAddress;
+    function userModeSetting(uint8 _mode,address _userRIMAssetsAddress, address user) public {
+        if(lendingInterface[msg.sender] == false){
+            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        }
+        require(userTotalLendingValue(user) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
+        
+        userMode[user] = _mode;
+        userRIMAssetsAddress[user] = _userRIMAssetsAddress;
+        emit UserModeSetting(user, _mode, _userRIMAssetsAddress);
     }
 
     //----------------------------- View Function------------------------------------
@@ -435,7 +441,7 @@ contract lendingManager  {
         _beforeUpdate(tokenAddr);
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).mintCoin(user,amount);
-        IERC20(tokenAddr).transferFrom(lendingVault,user,amount);
+        IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
         _assetsValueUpdate(tokenAddr);
 
         uint factor;
@@ -471,7 +477,7 @@ contract lendingManager  {
         }
         _beforeUpdate(tokenAddr);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amount);
-        IERC20(tokenAddr).transferFrom(user,lendingVault,amount);
+        IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
         _assetsValueUpdate(tokenAddr);
         emit RepayLoan(tokenAddr, amount, user);
     }
