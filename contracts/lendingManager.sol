@@ -95,6 +95,9 @@ contract lendingManager  {
                                 uint _homogeneousModeLTV,
                                 uint _bestDepositInterestRate) ;
     event UserModeSetting(address indexed user,uint8 _mode,address _userRIMAssetsAddress);
+    event LendingInterfaceSetup(address indexed _interface, bool _ToF);
+    event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
+    event SlcValue(address indexed slc, uint value);
     //------------------------------------------------------------------
 
     constructor() {
@@ -108,6 +111,7 @@ contract lendingManager  {
     // Evaluate the value of superLibraCoin
     function slcValueRevaluate(uint newValue) public  onlySetter {
         slcValue = newValue;
+        emit SlcValue(superLibraCoin,newValue);
     }
 
     function transferSetter(address _set) external onlySetter{
@@ -138,10 +142,12 @@ contract lendingManager  {
     }
     function setlendingInterface(address _interface, bool _ToF) external onlySetter{
         lendingInterface[_interface] = _ToF;
+        emit LendingInterfaceSetup(_interface, _ToF);
     }
     function setFloorOfHealthFactor(uint nomal, uint homogeneous) external onlySetter{
         nomalFloorOfHealthFactor = nomal;
         homogeneousFloorOfHealthFactor = homogeneous;
+        emit FloorOfHealthFactorSetup( nomal, homogeneous);
     }
 
     function licensedAssetsRegister(address _asset, 
@@ -202,8 +208,8 @@ contract lendingManager  {
         if(lendingInterface[msg.sender] == false){
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
-        require(userTotalLendingValue(user) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
-        
+        require(_userTotalLendingValue(user) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
+
         userMode[user] = _mode;
         userRIMAssetsAddress[user] = _userRIMAssetsAddress;
         emit UserModeSetting(user, _mode, _userRIMAssetsAddress);
@@ -236,24 +242,23 @@ contract lendingManager  {
             assetPrice[i] = iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]);
         }
     }
-    function userTotalLendingValue(address _user) public view returns(uint values){
+    function _userTotalLendingValue(address _user) internal view returns(uint values){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
-            values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(_user) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
+            values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(_user) 
+            * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
     }
-    function _userDepositAndLendingValue(address user) internal view returns(uint _amountDeposit,uint _amountLending){
+    function userDepositAndLendingValue(address user) public view returns(uint _amountDeposit,uint _amountLending){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         
-
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(userMode[user]==1 && assetsSerialNumber[i] == userRIMAssetsAddress[user]){
                 _amountDeposit  = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
                                 * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 _amountLending  = iDepositOrLoanCoin(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                * iSlcOracle(oracleAddr).getPrice(riskIsolationModeAcceptAssets) / 1 ether
-                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                                * iSlcOracle(oracleAddr).getPrice(riskIsolationModeAcceptAssets) / 1 ether;
                 break;
             }
             if(userMode[user]>1){
@@ -262,8 +267,7 @@ contract lendingManager  {
                                     * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
                                     * licensedAssets[assetsSerialNumber[i]].homogeneousModeLTV / 10000;
                     _amountLending += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)
-                                    * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                    * licensedAssets[assetsSerialNumber[i]].homogeneousModeLTV / 10000;
+                                    * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
                 }
                 continue;
             }
@@ -275,8 +279,7 @@ contract lendingManager  {
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
                                 * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 _amountLending += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)
-                                * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                                * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
             }
         }
     }
@@ -286,7 +289,7 @@ contract lendingManager  {
         uint _amountDeposit;
         uint _amountLending;
 
-        (_amountDeposit,_amountLending) = _userDepositAndLendingValue( user);
+        (_amountDeposit,_amountLending) = userDepositAndLendingValue( user);
         if(_amountLending > 0){
             userHealthFactor = _amountDeposit * 1 ether / _amountLending;
         }else if(_amountDeposit > 0){
@@ -300,7 +303,7 @@ contract lendingManager  {
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         uint _amountDeposit;
         uint _amountLending;
-        (_amountDeposit,_amountLending) = _userDepositAndLendingValue( user);
+        (_amountDeposit,_amountLending) = userDepositAndLendingValue( user);
         if(userMode[user]>1){
             userLendableLimit = _amountDeposit * 1 ether / nomalFloorOfHealthFactor - _amountLending;
         }else{

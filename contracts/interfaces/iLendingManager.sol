@@ -20,7 +20,7 @@ interface iLendingManager{
     
     function licensedAssetPrice() external view returns(uint[] memory assetPrice);
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets);
-    function userTotalLendingValue(address _user) external view returns(uint values);
+    function userDepositAndLendingValue(address user) external view returns(uint _amountDeposit,uint _amountLending);
     function userAssetOverview(address user) external view returns(uint[] memory _amountDeposit, uint[] memory _amountLending);
 
 

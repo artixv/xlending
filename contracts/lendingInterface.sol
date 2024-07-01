@@ -49,13 +49,12 @@ contract lendingInterface  {
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets){
         return iLendingManager(lendingManager).licensedAssetOverview();
     }
-    function userTotalLendingValue(address _user) external view returns(uint values){
-        return iLendingManager(lendingManager).userTotalLendingValue( _user);
+    function userDepositAndLendingValue(address user) public view returns(uint _amountDeposit,uint _amountLending){
+        return iLendingManager(lendingManager).userDepositAndLendingValue( user);
     }
     function userAssetOverview(address user) external view returns(uint[] memory _amountDeposit, uint[] memory _amountLending){
         return iLendingManager(lendingManager).userAssetOverview( user);
     }
-
 
     //------------------------------------------------Operation----------------------------------------------------
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress) external{
