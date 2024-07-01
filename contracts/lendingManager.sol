@@ -13,6 +13,9 @@ import "./interfaces/iLendingCoreAlgorithm.sol";
 import "./interfaces/iLendingVaults.sol";
 
 contract lendingManager  {
+    uint public constant ONE_YEAR = 31536000;
+    uint public constant UPPER_SYSTEM_LIMIT = 10000;
+
     address public superLibraCoin;
     uint    public slcValue;
     uint    public slcUnsecuredIssuancesAmount;
@@ -41,10 +44,10 @@ contract lendingManager  {
     struct licensedAsset{
         address assetAddr;             
         uint    maximumLTV;               // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount 
-                                          // for a home against the value of that property.(MAX = 10000) 
-        uint    liquidationPenalty;       // MAX = 10000 ,default is 500(5%)
-        uint    bestLendingRatio;         // MAX = 10000 , setting NOT more than 9000
-        uint    bestDepositInterestRate ; // MAX = 10000 , setting NOT more than 1000
+                                          // for a home against the value of that property.(MAX = UPPER_SYSTEM_LIMIT) 
+        uint    liquidationPenalty;       // MAX = UPPER_SYSTEM_LIMIT ,default is 500(5%)
+        uint    bestLendingRatio;         // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 9000
+        uint    bestDepositInterestRate ; // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 1000
         uint    maxLendingAmountInRIM;         // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
         uint8   lendingModeNum;           // Risk Isolation Mode: 1 ; SLC  USDT  USDC : 2  ;  CFX  xCFX sxCFX : 3
         uint    homogeneousModeLTV;       // SLC  USDT  USDC : 97%  ; CFX  xCFX sxCFX : 95%
@@ -256,7 +259,7 @@ contract lendingManager  {
             if(userMode[user]==1 && assetsSerialNumber[i] == userRIMAssetsAddress[user]){
                 _amountDeposit  = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / UPPER_SYSTEM_LIMIT;
                 _amountLending  = iDepositOrLoanCoin(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(riskIsolationModeAcceptAssets) / 1 ether;
                 break;
@@ -265,7 +268,7 @@ contract lendingManager  {
                 if(licensedAssets[assetsSerialNumber[i]].lendingModeNum == userMode[user]){
                     _amountDeposit += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
                                     * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                    * licensedAssets[assetsSerialNumber[i]].homogeneousModeLTV / 10000;
+                                    * licensedAssets[assetsSerialNumber[i]].homogeneousModeLTV / UPPER_SYSTEM_LIMIT;
                     _amountLending += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)
                                     * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
                 }
@@ -277,7 +280,7 @@ contract lendingManager  {
                 }
                 _amountDeposit += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / UPPER_SYSTEM_LIMIT;
                 _amountLending += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
             }
@@ -322,10 +325,10 @@ contract lendingManager  {
     function getCoinValues(address token) public view returns(uint[2] memory currentValue){
         currentValue[0] = assetInfos[token].latestDepositCoinValue 
                         + (block.timestamp - assetInfos[token].latestTimeStamp) * 1 ether
-                        * assetInfos[token].latestDepositInterest / (31536000 * 10000);
+                        * assetInfos[token].latestDepositInterest / (ONE_YEAR * UPPER_SYSTEM_LIMIT);
         currentValue[1] = assetInfos[token].latestLendingCoinValue 
                         + (block.timestamp - assetInfos[token].latestTimeStamp) * 1 ether
-                        * assetInfos[token].latestLendingInterest / (31536000 * 10000);
+                        * assetInfos[token].latestLendingInterest / (ONE_YEAR * UPPER_SYSTEM_LIMIT);
 
         if(currentValue[0] == 0){
             currentValue[0] = 1 ether;
@@ -498,8 +501,8 @@ contract lendingManager  {
         require( amountLending >= liquidateAmount,"Lending Manager: amountLending >= liquidateAmount");
 
         usedAmount  = usedAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
-        usedAmount = usedAmount * (10000 - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
-                                  (10000 * iSlcOracle(oracleAddr).getPrice(depositToken));
+        usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
+                                  (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));
         require( amountDeposit >= usedAmount,"Lending Manager: amountLending >= liquidateAmount");
 
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); 
@@ -520,12 +523,12 @@ contract lendingManager  {
 
         amountliquidate = amountliquidate * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
         amountDeposit = amountDeposit * iSlcOracle(oracleAddr).getPrice(depositToken) / 1 ether
-                      * 10000 / (10000 - licensedAssets[liquidateToken].liquidationPenalty);
+                      * UPPER_SYSTEM_LIMIT / (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty);
 
         if(amountliquidate < amountDeposit){
             maxAmounts[0] = amountliquidate;
-            maxAmounts[1] = amountliquidate * (10000 - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether 
-                                            / (10000 * iSlcOracle(oracleAddr).getPrice(depositToken));
+            maxAmounts[1] = amountliquidate * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether 
+                                            / (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));
         }else if(amountliquidate == amountDeposit){
             maxAmounts[0] = amountliquidate;
             maxAmounts[1] = amountDeposit;
