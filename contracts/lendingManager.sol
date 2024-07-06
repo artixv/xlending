@@ -48,7 +48,7 @@ contract lendingManager  {
         uint    liquidationPenalty;       // MAX = UPPER_SYSTEM_LIMIT ,default is 500(5%)
         uint    bestLendingRatio;         // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 9000
         uint    bestDepositInterestRate ; // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 1000
-        uint    maxLendingAmountInRIM;         // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
+        uint    maxLendingAmountInRIM;    // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
         uint8   lendingModeNum;           // Risk Isolation Mode: 1 ; SLC  USDT  USDC : 2  ;  CFX  xCFX sxCFX : 3
         uint    homogeneousModeLTV;       // SLC  USDT  USDC : 97%  ; CFX  xCFX sxCFX : 95%
     }
@@ -101,6 +101,7 @@ contract lendingManager  {
     event LendingInterfaceSetup(address indexed _interface, bool _ToF);
     event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
     event SlcValue(address indexed slc, uint value);
+    event DepositAndLoanInterest(address indexed token, uint latestDepositInterest, uint latestLoanInterest, uint latestTimeStamp);
     //------------------------------------------------------------------
 
     constructor() {
@@ -369,6 +370,7 @@ contract lendingManager  {
         latestInterest = iLendingCoreAlgorithm(coreAlgorithm).assetsValueUpdate(token);
         assetInfos[token].latestDepositInterest = latestInterest[0];
         assetInfos[token].latestLendingInterest = latestInterest[1];
+        emit DepositAndLoanInterest( token, latestInterest[0], latestInterest[1], block.timestamp);
         
     }
 
