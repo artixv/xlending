@@ -162,8 +162,16 @@ contract lendingManager  {
                                     uint8 _lendingModeNum,
                                     uint _homogeneousModeLTV,
                                     uint _bestDepositInterestRate) public onlySetter {
-        require(licensedAssets[_asset].assetAddr == address(0),"Lending Manager: asset already registered!");
+        require(   _maxLTV < UPPER_SYSTEM_LIMIT
+                && _liqPenalty <= UPPER_SYSTEM_LIMIT/5
+                && _bestLendingRatio < UPPER_SYSTEM_LIMIT
+                && _homogeneousModeLTV >= _maxLTV
+                && _homogeneousModeLTV < UPPER_SYSTEM_LIMIT
+                && _bestDepositInterestRate > 0
+                && _bestDepositInterestRate < UPPER_SYSTEM_LIMIT,"Lending Manager: Exceed UPPER_SYSTEM_LIMIT");
+        require(licensedAssets[_asset].assetAddr == address(0),"Lending Manager: Asset already registered!");
         assetsSerialNumber.push(_asset);
+        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = _maxLTV;
         licensedAssets[_asset].liquidationPenalty = _liqPenalty;
@@ -218,10 +226,31 @@ contract lendingManager  {
         userRIMAssetsAddress[user] = _userRIMAssetsAddress;
         emit UserModeSetting(user, _mode, _userRIMAssetsAddress);
     }
+    //     licensedAssets[_asset].assetAddr = _asset;
+    //     licensedAssets[_asset].maximumLTV = _maxLTV;
+    //     licensedAssets[_asset].liquidationPenalty = _liqPenalty;
+    //     licensedAssets[_asset].maxLendingAmountInRIM = _maxLendingAmountInRIM;
+    //     licensedAssets[_asset].bestLendingRatio = _bestLendingRatio;
+    //     licensedAssets[_asset].lendingModeNum = _lendingModeNum;
+    //     licensedAssets[_asset].homogeneousModeLTV = _homogeneousModeLTV;
+    //     licensedAssets[_asset].bestDepositInterestRate = _bestDepositInterestRate;
+    //     assetsDepositAndLend[_asset] = iCoinFactory(coinFactory).createDeAndLoCoin(_asset);
 
     //----------------------------- View Function------------------------------------
-    function assetsBaseInfo(address token) public view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate){
-        return (licensedAssets[token].maximumLTV,licensedAssets[token].bestLendingRatio,licensedAssets[token].lendingModeNum,licensedAssets[token].bestDepositInterestRate);
+    function assetsBaseInfo(address token) public view returns(uint maximumLTV,
+                                                               uint liquidationPenalty,
+                                                               uint maxLendingAmountInRIM,
+                                                               uint bestLendingRatio,
+                                                               uint lendingModeNum,
+                                                               uint homogeneousModeLTV,
+                                                               uint bestDepositInterestRate){
+        return (licensedAssets[token].maximumLTV,
+                licensedAssets[token].liquidationPenalty,
+                licensedAssets[token].maxLendingAmountInRIM,
+                licensedAssets[token].bestLendingRatio,
+                licensedAssets[token].lendingModeNum,
+                licensedAssets[token].homogeneousModeLTV,
+                licensedAssets[token].bestDepositInterestRate);
     }
     function assetsLiqPenaltyInfo(address token) public view returns(uint liqPenalty){
         liqPenalty = licensedAssets[token].liquidationPenalty;
@@ -302,6 +331,31 @@ contract lendingManager  {
             userHealthFactor = 0 ether;
         }
     }
+    // operator mode:  assetsDeposit 0, withdrawDeposit 1, lendAsset 2, repayLoan 3
+    function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor){
+        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        uint _amountDeposit;
+        uint _amountLending;
+
+        (_amountDeposit,_amountLending) = userDepositAndLendingValue( user);
+        if(operator == 0){
+            _amountDeposit += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 1){
+            _amountDeposit -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 2){
+            _amountLending += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 3){
+            _amountLending -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }
+        if(_amountLending > 0){
+            userHealthFactor = _amountDeposit * 1 ether / _amountLending;
+        }else if(_amountDeposit > 0){
+            userHealthFactor = 1000 ether;
+        }else{
+            userHealthFactor = 0 ether;
+        }
+    }
+
     // User's Lendable Limit
     function viewUserLendableLimit(address user) public view returns(uint userLendableLimit){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
@@ -340,11 +394,13 @@ contract lendingManager  {
 
     }
 
-    function userAssetOverview(address user) public view returns(uint[] memory _amountDeposit, uint[] memory _amountLending){
+    function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory _amountDeposit, uint[] memory _amountLending){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         _amountDeposit = new uint[](assetsSerialNumber.length);
         _amountLending = new uint[](assetsSerialNumber.length);
+        tokens = new address[](assetsSerialNumber.length);
         for(uint i=0;i<assetsSerialNumber.length;i++){
+            tokens[i] = assetsSerialNumber[0];
             _amountDeposit[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user);
             _amountLending[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user);
         }
@@ -513,6 +569,7 @@ contract lendingManager  {
         iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmount);
         iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).burnCoin(user,usedAmount);
     }
+    
     function tokenLiquidateEstimate(address user,
                             address liquidateToken,
                             address depositToken) public view returns(uint[2] memory maxAmounts){

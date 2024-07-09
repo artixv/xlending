@@ -9,10 +9,18 @@ interface iLendingManager{
     function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor);
     function viewUserLendableLimit(address user) external view returns(uint userLendableLimit);
     function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty);
+    function assetsSerialNumber(uint) external view returns(address);
 
     function assetsDepositAndLendAddrs(address token) external view returns (address[2] memory depositAndLend);
 
-    function assetsBaseInfo(address token) external view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate);
+    // function assetsBaseInfo(address token) external view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate);
+    function assetsBaseInfo(address token) external view returns(uint maximumLTV,
+                                                               uint liquidationPenalty,
+                                                               uint maxLendingAmountInRIM,
+                                                               uint bestLendingRatio,
+                                                               uint lendingModeNum,
+                                                               uint homogeneousModeLTV,
+                                                               uint bestDepositInterestRate);
     function assetsTimeDependentParameter(address token) external view returns(uint latestDepositCoinValue,
                                                                    uint latestLendingCoinValue,
                                                                    uint latestDepositInterest,
@@ -21,7 +29,9 @@ interface iLendingManager{
     function licensedAssetPrice() external view returns(uint[] memory assetPrice);
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets);
     function userDepositAndLendingValue(address user) external view returns(uint _amountDeposit,uint _amountLending);
-    function userAssetOverview(address user) external view returns(uint[] memory _amountDeposit, uint[] memory _amountLending);
+    function userAssetOverview(address user) external view returns(address[] memory tokens,uint[] memory _amountDeposit, uint[] memory _amountLending);
+    // function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed);
+    function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor);
 
 
     //Operation

@@ -33,14 +33,19 @@ contract lendingCoreAlgorithm  {
         latestInterest[0] = depositInterestRate( token, lendingRatio);
         latestInterest[1] = lendingInterestRate( token, lendingRatio);
     }
-    // function assetsValueUpdate2(address token) public view returns(address[2] memory depositAndLend){
-    //     depositAndLend = iLendingManager(lendingManager).assetsDepositAndLendAddrs(token);
-    // }
-    // function assetsValueUpdate3(address token) public view returns(address depositAndLend){
-    //     depositAndLend = iLendingManager(lendingManager).assetsDepositAndLendAddrs(token)[0];}
+    // function assetsBaseInfo(address token) external view returns(uint maximumLTV,
+    //                                                            uint liquidationPenalty,
+    //                                                            uint maxLendingAmountInRIM,
+    //                                                            uint bestLendingRatio,
+    //                                                            uint lendingModeNum,
+    //                                                            uint homogeneousModeLTV,
+    //                                                            uint bestDepositInterestRate);
 
-    function assetsBaseInfo(address token) public view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate){
-        return (iLendingManager(lendingManager).assetsBaseInfo(token));
+    function assetsBaseInfo(address token) internal view returns(uint maximumLTV,
+                                                               uint bestLendingRatio,
+                                                               uint lendingModeNum,
+                                                               uint bestDepositInterestRate){
+        (maximumLTV,,,bestLendingRatio,lendingModeNum,,bestDepositInterestRate) = iLendingManager(lendingManager).assetsBaseInfo(token);
     }
 
     function depositInterestRate(address token,uint lendingRatio) public view returns(uint _rate){
