@@ -38,7 +38,7 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         require(msg.sender == setter, 'Deposit Or Loan Coin: Only setter Use');
         _;
     }
-    
+
     //----------------------------- event -----------------------------
     event Mint(address indexed token,address mintAddress, uint amount);
     event Burn(address indexed token,address burnAddress, uint amount);

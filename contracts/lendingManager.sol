@@ -33,12 +33,12 @@ contract lendingManager  {
     uint    public nomalFloorOfHealthFactor;
     uint    public homogeneousFloorOfHealthFactor;
 
-    //  Assets Init:   SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
-    //  MaximumLTV:    96%   95%   95%  88%  85%  65%  65%   75%  55%  55%
-    //  LiqPenalty:     3%    5%    5%   5%   5%   5%   5%    5%   5%   5%
+    //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
+    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%
+    //  LiqPenalty:          3%    5%    5%   5%   5%   5%   5%    5%   5%   5%
     //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6
-    //bestLendingRatio: 90%  85%   85%  70%  70%  65%  65%   65%  50%  50%
-    //lendingModeNum:    2     2     2    0    0    3    3     3    0    0
+    //bestLendingRatio:      90%  85%   85%  70%  70%  65%  65%   65%  50%  50%
+    //lendingModeNum:         2     2     2    0    0    3    3     3    0    0
 
 
     struct licensedAsset{

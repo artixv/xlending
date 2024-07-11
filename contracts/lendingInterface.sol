@@ -93,6 +93,10 @@ contract lendingInterface  {
     function assetsSerialNumber(uint num) public view returns(address){
         return iLendingManager(lendingManager).assetsSerialNumber(num);
     }
+    function userMode(address user) external view returns(uint8 mode, address userSetAssets){
+        mode = iLendingManager(lendingManager).userMode(user);
+        userSetAssets = iLendingManager(lendingManager).userRIMAssetsAddress(user);
+    }
 
     //------------------------------------------------Operation----------------------------------------------------
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress) external{

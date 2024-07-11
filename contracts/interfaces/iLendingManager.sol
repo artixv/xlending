@@ -32,7 +32,8 @@ interface iLendingManager{
     function userAssetOverview(address user) external view returns(address[] memory tokens,uint[] memory _amountDeposit, uint[] memory _amountLending);
     // function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed);
     function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor);
-
+    function userMode(address user) external view returns(uint8);
+    function userRIMAssetsAddress(address user) external view returns(address);
 
     //Operation
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress, address user) external;
