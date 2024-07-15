@@ -4,15 +4,63 @@
 pragma solidity ^0.8.0;
 
 interface iLendingManager{
+    struct licensedAsset{
+        address assetAddr;             
+        uint    maximumLTV;               // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount 
+                                          // for a home against the value of that property.(MAX = UPPER_SYSTEM_LIMIT) 
+        uint    liquidationPenalty;       // MAX = UPPER_SYSTEM_LIMIT ,default is 500(5%)
+        uint    bestLendingRatio;         // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 9000
+        uint    bestDepositInterestRate ; // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 1000
+        uint    maxLendingAmountInRIM;    // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
+        uint8   lendingModeNum;           // Risk Isolation Mode: 1 ; SLC  USDT  USDC : 2  ;  CFX  xCFX sxCFX : 3
+        uint    homogeneousModeLTV;       // SLC  USDT  USDC : 97%  ; CFX  xCFX sxCFX : 95%
+    }
+
+    struct assetInfo{
+        uint    latestDepositCoinValue;   // Relative to the initial DepositCoin value, the initial value is 1 ether
+        uint    latestLendingCoinValue;   // Relative to the initial LendingCoin value, the initial value is 1 ether
+        uint    latestDepositInterest;    // Latest interest value of DepositCoin
+        uint    latestLendingInterest;    // Latest interest value of LendingCoin
+        uint    latestTimeStamp;          // Latest TimeStamp
+    }
+    // uint public constant ONE_YEAR = 31536000;
+    function ONE_YEAR() external view returns (uint);
+    // uint public constant UPPER_SYSTEM_LIMIT = 10000;
+    function UPPER_SYSTEM_LIMIT() external view returns (uint);
+
+    // uint    public nomalFloorOfHealthFactor;
+    function nomalFloorOfHealthFactor() external view returns (uint);
+    // uint    public homogeneousFloorOfHealthFactor;
+    function homogeneousFloorOfHealthFactor() external view returns (uint);
+
+
+    // mapping(address => licensedAsset) public licensedAssets;
+    function licensedAssets(address) external view returns (licensedAsset memory);
+    // mapping(address => address[2]) assetsDepositAndLend;
+    function assetsDepositAndLendAddrs(address) external view returns (address[2] memory);
+    // address[] public assetsSerialNumber;
+    function assetsSerialNumber(uint) external view returns(address);
+    // mapping(address => bool) public lendingInterface;
+    function lendingInterface(address) external view returns (bool);
+    // mapping(address => assetInfo) public assetInfos;
+    // function assetInfos(address) external view returns (assetInfo memory);
+    // mapping(address => mapping(address => uint)) public userRIMAssetsLendingNetAmount;
+    function userRIMAssetsLendingNetAmount(address,address) external view returns (uint);
+    // mapping(address => uint) public riskIsolationModeLendingNetAmount; //RIM  Risk Isolation Mode
+    function riskIsolationModeLendingNetAmount(address) external view returns (uint);
+    // mapping(address => address) public userRIMAssetsAddress; 
+    function userRIMAssetsAddress(address user) external view returns(address);
+    // address public riskIsolationModeAcceptAssets;
+    function riskIsolationModeAcceptAssets() external view returns(address);
+    // mapping(address => uint8) public userMode;
+    function userMode(address user) external view returns(uint8);
 
     function getCoinValues(address token) external view returns (uint[2] memory price);
     function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor);
     function viewUserLendableLimit(address user) external view returns(uint userLendableLimit);
     function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty);
-    function assetsSerialNumber(uint) external view returns(address);
 
-    function assetsDepositAndLendAddrs(address token) external view returns (address[2] memory depositAndLend);
-
+    
     // function assetsBaseInfo(address token) external view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate);
     function assetsBaseInfo(address token) external view returns(uint maximumLTV,
                                                                uint liquidationPenalty,
@@ -29,11 +77,14 @@ interface iLendingManager{
     function licensedAssetPrice() external view returns(uint[] memory assetPrice);
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets);
     function userDepositAndLendingValue(address user) external view returns(uint _amountDeposit,uint _amountLending);
-    function userAssetOverview(address user) external view returns(address[] memory tokens,uint[] memory _amountDeposit, uint[] memory _amountLending);
-    // function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed);
-    function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor);
-    function userMode(address user) external view returns(uint8);
-    function userRIMAssetsAddress(address user) external view returns(address);
+    function userAssetOverview(address user) external view returns(address[] memory tokens,
+                                                                   uint[] memory _amountDeposit, 
+                                                                   uint[] memory _amountLending);
+
+    function usersHealthFactorEstimate(address user,
+                                       address token,
+                                       uint amount,
+                                       uint operator) external view returns(uint userHealthFactor);
 
     //Operation
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress, address user) external;
@@ -54,7 +105,5 @@ interface iLendingManager{
     function tokenLiquidateEstimate(address user,
                             address liquidateToken,
                             address depositToken) external view returns(uint[2] memory maxAmounts);
-
-
 
 }

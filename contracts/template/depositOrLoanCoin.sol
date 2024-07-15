@@ -5,21 +5,31 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20NoTransfer.sol";
 import "../interfaces/iLendingManager.sol";
+import "../interfaces/iRewardMini.sol";
 
 contract depositOrLoanCoin is ERC20NoTransfer {
     address public manager;
     address public setter;
     address newsetter;
     address public OCoin;
+    address public rewardContract;
+    
     uint public depositOrLoan;
     uint public OQCtotalSupply; //OriginalQuantityCoin
+    
     mapping(address=>uint) public userOQCAmount;
 
-    constructor(uint _depositOrLoan,address _OCoin, address _manager, string memory _name,string memory _symbol) ERC20NoTransfer(_name, _symbol){
+    constructor(uint _depositOrLoan,
+                address _OCoin, 
+                address _manager,
+                address _rewardContract,
+                string memory _name,
+                string memory _symbol) ERC20NoTransfer(_name, _symbol){
         setter = msg.sender;
         OCoin = _OCoin;
         manager = _manager;
         depositOrLoan = _depositOrLoan;
+        rewardContract = _rewardContract;
     }
 
     //----------------------------modifier ----------------------------
@@ -44,8 +54,11 @@ contract depositOrLoanCoin is ERC20NoTransfer {
     event Burn(address indexed token,address burnAddress, uint amount);
     //-------------------------- sys function --------------------------
 
-    function resetup(address _manager) external onlySetter{
+    function managerSetup(address _manager) external onlySetter{
         manager = _manager;
+    }
+    function rewardContractSetup(address _rewardContract) external onlySetter{
+        rewardContract = _rewardContract;
     }
     function transferSetter(address _set) external onlySetter{
         newsetter = _set;
@@ -72,6 +85,8 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         userOQCAmount[_account] += addTokens;
         OQCtotalSupply += addTokens;
 
+        iRewardMini(rewardContract).recordUpdate(_account,userOQCAmount[_account]);
+
         emit Transfer(address(0), _account, _value);
         emit Mint(address(this), _account, _value);
     }
@@ -88,6 +103,8 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         burnTokens = _value * 1 ether / burnTokens;
         userOQCAmount[_account] -= burnTokens;
         OQCtotalSupply -= burnTokens;
+
+        iRewardMini(rewardContract).recordUpdate(_account,userOQCAmount[_account]);
 
         emit Burn(address(this), _account, _value);
         emit Transfer(_account, address(0), _value);

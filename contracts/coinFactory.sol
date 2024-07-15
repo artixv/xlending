@@ -3,14 +3,17 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import './template/depositOrLoanCoin.sol';
-
+import "./interfaces/iRewardMini.sol";
 
 contract coinFactory  {
     //----------------------Persistent Variables ----------------------
     address public setPermissionAddress;
     address newPermissionAddress;
     // address public vaults;//All states are stored in the vault
-    address public coinManager;
+    address public lendingManager;
+    address public rewardContract;
+    uint public depositType;
+    uint public LoanType;
     mapping(address => address) public getDepositCoin;
     mapping(address => address) public getLoanCoin;
 
@@ -27,14 +30,18 @@ contract coinFactory  {
 
         require(token != address(0), 'Coin Factory: ZERO_ADDRESS');
         require(getDepositCoin[token] == address(0), 'Coin Factory: COIN_EXISTS');// single check is sufficient
-        require(coinManager != address(0), 'Coin Factory: coin manager NOT Set');
+        require(lendingManager != address(0), 'Coin Factory: Coin manager NOT Set');
+        require(rewardContract != address(0), 'Coin Factory: Reward Contract NOT Set');
+        require(depositType != 0, 'Coin Factory: Reward Type NOT Set');
         bytes32 _salt1 = keccak256(abi.encodePacked(token,msg.sender, "Deposit Coin"));
         bytes32 _salt2 = keccak256(abi.encodePacked(token,msg.sender, "Loan Coin"));
         //Only ERC20 Tokens Can creat pairs
-        _pAndLCoin[0] = address(new depositOrLoanCoin{salt: _salt1}(0,token,coinManager, strConcat(string(ERC20(token).symbol()), " Deposit Coin"),strConcat(string(ERC20(token).symbol()), " DCoin")));  //
-        _pAndLCoin[1] = address(new depositOrLoanCoin{salt: _salt2}(1,token,coinManager, strConcat(string(ERC20(token).symbol()), " Loan Coin"),strConcat(string(ERC20(token).symbol()), " LCoin"))); 
+        _pAndLCoin[0] = address(new depositOrLoanCoin{salt: _salt1}(0,token,lendingManager, rewardContract, strConcat(string(ERC20(token).symbol()), " Deposit Coin"),strConcat(string(ERC20(token).symbol()), " DCoin")));  //
+        _pAndLCoin[1] = address(new depositOrLoanCoin{salt: _salt2}(1,token,lendingManager, rewardContract,strConcat(string(ERC20(token).symbol()), " Loan Coin"),strConcat(string(ERC20(token).symbol()), " LCoin"))); 
         getDepositCoin[token] = _pAndLCoin[0];
         getLoanCoin[token] = _pAndLCoin[1];
+        iRewardMini(rewardContract).factoryUsedRegist(_pAndLCoin[0], depositType);
+        iRewardMini(rewardContract).factoryUsedRegist(_pAndLCoin[1], LoanType);
         emit DepositCoinCreated( token, _pAndLCoin[0]);
         emit LoanCoinCreatedX( token, _pAndLCoin[1]);
     }
@@ -49,15 +56,22 @@ contract coinFactory  {
     //--------------------------- Setup functions --------------------------
 
 
-    function settings(address _coinManager) external {
+    function settings(address _lendingManager,address _rewardContract) external {
         require(msg.sender == setPermissionAddress, 'Coin Factory: Permission FORBIDDEN');
         // vaults = _vault;
-        coinManager = _coinManager;
+        lendingManager = _lendingManager;
+        rewardContract = _rewardContract;
     }
 
-    function coinResetup(address _manager,address coinAddr) external{
+    function coinResetup(address _manager,address _rewardContract,address coinAddr) external{
         require(msg.sender == setPermissionAddress, 'Coin Factory: Permission FORBIDDEN');
-        depositOrLoanCoin(coinAddr).resetup(_manager);
+        depositOrLoanCoin(coinAddr).managerSetup(_manager);
+        depositOrLoanCoin(coinAddr).rewardContractSetup(_rewardContract);
+    }
+    function rewardTypeSetup(uint _depositType,uint _LoanType) external{
+        require(msg.sender == setPermissionAddress, 'Coin Factory: Permission FORBIDDEN');
+        depositType = _depositType;
+        LoanType = _LoanType;
     }
 
     function setPA(address _setPermissionAddress) external {

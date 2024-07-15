@@ -62,18 +62,14 @@ contract lendingManager  {
     }
 
     mapping(address => licensedAsset) public licensedAssets;
-    mapping(address => address[2]) assetsDepositAndLend;
+    mapping(address => address[2]) public assetsDepositAndLend;
     address[] public assetsSerialNumber;
-
     mapping(address => bool) public lendingInterface;
-
     mapping(address => assetInfo) public assetInfos;
-    
     mapping(address => mapping(address => uint)) public userRIMAssetsLendingNetAmount;
     mapping(address => uint) public riskIsolationModeLendingNetAmount; //RIM  Risk Isolation Mode
     mapping(address => address) public userRIMAssetsAddress; 
     address public riskIsolationModeAcceptAssets;
-
     mapping(address => uint8) public userMode; // High liquidity collateral mode:  0 ; 
                                                // Risk isolation mode              1 ;
                                                // homogeneousMode:                 2  SLC  USDT  USDC; 96% 3%
