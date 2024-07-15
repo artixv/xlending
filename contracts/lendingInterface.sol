@@ -29,7 +29,7 @@ contract lendingInterface  {
         return iLendingManager(lendingManager).assetsLiqPenaltyInfo( token);
     }
 
-    function assetsDepositAndLendAddrs(address token) external view returns (address[2] memory depositAndLend){
+    function assetsDepositAndLendAddrs(address token) public view returns (address[2] memory depositAndLend){
         return iLendingManager(lendingManager).assetsDepositAndLendAddrs( token);
     }
     function assetsDepositAndLendAmount(address token) external view returns (uint[2] memory depositAndLendAmount){
@@ -257,6 +257,14 @@ contract lendingInterface  {
             IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
+    function withdrawDepositMax(address tokenAddr) external{
+        address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
+        uint tokenBalance = IERC20(depositAndLend[0]).balanceOf(address(msg.sender));
+        iLendingManager(lendingManager).withdrawDeposit( tokenAddr, tokenBalance, msg.sender);
+        if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+    }
     // lend Asset
     function lendAsset(address tokenAddr, uint amount) external{
         iLendingManager(lendingManager).lendAsset( tokenAddr, amount, msg.sender);
@@ -269,6 +277,16 @@ contract lendingInterface  {
         IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
         IERC20(tokenAddr).approve(lendingManager, amount);
         iLendingManager(lendingManager).repayLoan( tokenAddr, amount, msg.sender);
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+    }
+    function repayLoanMax(address tokenAddr,uint amount) external{
+        address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
+        uint tokenBalance = IERC20(depositAndLend[1]).balanceOf(address(msg.sender));
+        IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
+        IERC20(tokenAddr).approve(lendingManager, tokenBalance);
+        iLendingManager(lendingManager).repayLoan( tokenAddr, tokenBalance, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
             IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
