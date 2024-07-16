@@ -7,11 +7,9 @@ import "./interfaces/iLendingManager.sol";
 
 contract lendingInterface  {
     address public lendingManager;
-    address public oracleAddr;
 
-    constructor(address _lendingManager, address _oracleAddr) {
+    constructor(address _lendingManager) {
         lendingManager = _lendingManager;
-        oracleAddr = _oracleAddr;
     }
 
     //------------------------------------------------ View ----------------------------------------------------
@@ -114,7 +112,7 @@ contract lendingInterface  {
                                                                 uint[] memory _amountLending,
                                                                 uint[] memory _depositInterest,
                                                                 uint[] memory _lendingInterest){
-        (tokens,_amountDeposit,_amountLending) = iLendingManager(lendingManager).userAssetOverview( user);
+        (tokens,_amountDeposit,_amountLending) = iLendingManager(lendingManager).userAssetOverview(user);
         _depositInterest = new uint[](tokens.length);
         _lendingInterest = new uint[](tokens.length);
         for(uint i=0;i<tokens.length;i++){
@@ -260,7 +258,11 @@ contract lendingInterface  {
         for(i=0;i<tokens.length;i++){
             netWorth = netWorth + int(tempRustFactor[1]) - int(tempRustFactor[2]);
         }
-        netApy = (int(tempRustFactor[3]) - int(tempRustFactor[4])) / int(tempRustFactor[0]);
+        if(tempRustFactor[0] == 0){
+            netApy = 0;
+        }else{
+            netApy = (int(tempRustFactor[3]) - int(tempRustFactor[4])) / int(tempRustFactor[0]);
+        }
     }
 
     //------------------------------------------------Operation----------------------------------------------------

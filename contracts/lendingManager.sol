@@ -33,12 +33,14 @@ contract lendingManager  {
     uint    public nomalFloorOfHealthFactor;
     uint    public homogeneousFloorOfHealthFactor;
 
-    //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
-    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%
-    //  LiqPenalty:          3%    5%    5%   5%   5%   5%   5%    5%   5%   5%
-    //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6
-    //bestLendingRatio:      90%  85%   85%  70%  70%  65%  65%   65%  50%  50%
-    //lendingModeNum:         2     2     2    0    0    3    3     3    0    0
+    //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs  XUN
+    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%   50%
+    //  LiqPenalty:          3%    5%    5%   5%   5%   5%   5%    5%   5%   5%    6%
+    //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6   1e6
+    //bestLendingRatio:      85%  80%   80%  70%  70%  65%  65%   65%  50%  50%   40%
+    //lendingModeNum:         2     2     2    0    0    3    3     3    1    1    1
+    //homogeneousModeLTV:    97%  97%   97%  88%  85%  95%  95%   95%  55%  55%   50%
+    //bestDepositInterestRate 4%   4%    4%  4.5% 4.6%  5.2% 5.2%  5.2% 6%   6%  6.2% 
 
 
     struct licensedAsset{
@@ -217,6 +219,9 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
         require(_userTotalLendingValue(user) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
+        if(_mode == 1){
+            require(licensedAssets[_userRIMAssetsAddress].maxLendingAmountInRIM > 0,"Lending Manager: Mode 1 Need a RIMAsset.");
+        }
 
         userMode[user] = _mode;
         userRIMAssetsAddress[user] = _userRIMAssetsAddress;
@@ -396,7 +401,7 @@ contract lendingManager  {
         _amountLending = new uint[](assetsSerialNumber.length);
         tokens = new address[](assetsSerialNumber.length);
         for(uint i=0;i<assetsSerialNumber.length;i++){
-            tokens[i] = assetsSerialNumber[0];
+            tokens[i] = assetsSerialNumber[i];
             _amountDeposit[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user);
             _amountLending[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user);
         }
@@ -440,7 +445,7 @@ contract lendingManager  {
             require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         }
         _beforeUpdate(tokenAddr);
-        IERC20(tokenAddr).transferFrom(user,lendingVault,amount);
+        IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).mintCoin(user,amount);
         _assetsValueUpdate(tokenAddr);
         emit AssetsDeposit(tokenAddr, amount, user);
@@ -463,7 +468,7 @@ contract lendingManager  {
         //need + vualt add accept amount function (only manager)
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         _beforeUpdate(tokenAddr);
-        IERC20(tokenAddr).transferFrom(lendingVault,user,amount);
+        IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).burnCoin(user,amount);
         _assetsValueUpdate(tokenAddr);
         
