@@ -4,7 +4,7 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/iLendingManager.sol";
-import "./interfaces/islcoracle.sol";
+
 contract lendingInterface  {
     address public lendingManager;
     address public oracleAddr;
@@ -32,10 +32,23 @@ contract lendingInterface  {
     function assetsDepositAndLendAddrs(address token) public view returns (address[2] memory depositAndLend){
         return iLendingManager(lendingManager).assetsDepositAndLendAddrs( token);
     }
-    function assetsDepositAndLendAmount(address token) external view returns (uint[2] memory depositAndLendAmount){
+    function assetsDepositAndLendAmount(address token) public view returns (uint[2] memory depositAndLendAmount){
         address[2] memory depositAndLend = iLendingManager(lendingManager).assetsDepositAndLendAddrs( token);
         depositAndLendAmount[0] = IERC20(depositAndLend[0]).totalSupply();
         depositAndLendAmount[1] = IERC20(depositAndLend[1]).totalSupply();
+    }
+    function lendAvailableAmount() external view returns (uint[] memory availableAmount){
+        uint[] memory assetPrice = licensedAssetPrice();
+        availableAmount = new uint[](assetPrice.length);
+        uint[2] memory depositAndLendAmount;
+        for(uint i=0;i<assetPrice.length;i++){
+            depositAndLendAmount = assetsDepositAndLendAmount(assetsSerialNumber(i));
+            if(depositAndLendAmount[0]>depositAndLendAmount[1]){
+                availableAmount[i] = depositAndLendAmount[0] - depositAndLendAmount[1];
+            }else{
+                availableAmount[i] = 0;
+            }
+        }
     }
 
     function assetsBaseInfo(address token) public view returns(uint maximumLTV,
@@ -95,6 +108,19 @@ contract lendingInterface  {
                                                                    uint[] memory _amountDeposit, 
                                                                    uint[] memory _amountLending){
         return iLendingManager(lendingManager).userAssetOverview( user);
+    }
+    function userAssetDetail(address user) external view returns(address[] memory tokens, 
+                                                                uint[] memory _amountDeposit, 
+                                                                uint[] memory _amountLending,
+                                                                uint[] memory _depositInterest,
+                                                                uint[] memory _lendingInterest){
+        (tokens,_amountDeposit,_amountLending) = iLendingManager(lendingManager).userAssetOverview( user);
+        _depositInterest = new uint[](tokens.length);
+        _lendingInterest = new uint[](tokens.length);
+        for(uint i=0;i<tokens.length;i++){
+            (,,_depositInterest[i],_lendingInterest[i]) = assetsTimeDependentParameter(tokens[i]);
+        }
+        
     }
     function usersHealthFactorEstimate(address user,
                                        address token,
@@ -281,7 +307,7 @@ contract lendingInterface  {
             IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
-    function repayLoanMax(address tokenAddr,uint amount) external{
+    function repayLoanMax(address tokenAddr) external{
         address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
         uint tokenBalance = IERC20(depositAndLend[1]).balanceOf(address(msg.sender));
         IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);

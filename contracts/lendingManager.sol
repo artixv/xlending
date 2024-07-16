@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ixinterface.sol";
 import "./interfaces/islcoracle.sol";
 
-import "./interfaces/iCoinfactory.sol";
+import "./interfaces/iCoinFactory.sol";
 import "./interfaces/iDepositOrLoanCoin.sol";
 import "./interfaces/iLendingCoreAlgorithm.sol";
 import "./interfaces/iLendingVaults.sol";
