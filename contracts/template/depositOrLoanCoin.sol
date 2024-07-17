@@ -111,7 +111,6 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         }else{
             OQCtotalSupply = 0;
         }
-        OQCtotalSupply -= burnTokens;
 
         iRewardMini(rewardContract).recordUpdate(_account,userOQCAmount[_account]);
 
