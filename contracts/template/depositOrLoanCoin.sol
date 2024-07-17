@@ -118,10 +118,6 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         emit Transfer(_account, address(0), _value);
     }
 
-    // function burnAllCoin(address _account) public {
-    //     burnCoin( _account,balanceOf(_account));
-    // }
-
     //---------------------------------------------------------------------
     /**
      * @dev balance Of account will auto increase
