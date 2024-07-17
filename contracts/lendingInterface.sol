@@ -4,12 +4,15 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/iLendingManager.sol";
+import "./interfaces/iwxcfx.sol";
 
 contract lendingInterface  {
     address public lendingManager;
+    address public wcfx;
 
-    constructor(address _lendingManager) {
+    constructor(address _lendingManager, address _wcfx) {
         lendingManager = _lendingManager;
+        wcfx = _wcfx;
     }
 
     //------------------------------------------------ View ----------------------------------------------------
@@ -161,7 +164,7 @@ contract lendingInterface  {
     function usersRiskDetails(address user) external view returns(uint userValueUsedRatio, 
                                                                   uint userMaxUsedRatio, 
                                                                   uint tokenLiquidateRatio){
-        uint[4] memory tempRustFactor;
+        uint[3] memory tempRustFactor;
         uint8 _mode;
         address _userRIMSetAssets;
         (_mode, _userRIMSetAssets) = userMode( user);
@@ -170,61 +173,64 @@ contract lendingInterface  {
         address[] memory tokens;
         uint[] memory _amountDeposit;
         uint[] memory _amountLending;
-        // uint _count;  tempRustFactor[3]
+        // uint _max_amount = UPPER_SYSTEM_LIMIT();  
         iLendingManager.licensedAsset memory usefulAsset;
         uint[] memory assetPrice = licensedAssetPrice();
-        uint i;
         (tokens, _amountDeposit, _amountLending) = userAssetOverview(user);
         if(_mode == 1){
-            for(i=0;i<tokens.length;i++){
+            for(uint i=0;i<tokens.length;i++){
                 if(tokens[i] ==_userRIMSetAssets && _amountDeposit[i] > 0){
-                    userValueUsedRatio = (userRIMAssetsLendingNetAmount(user,_userRIMSetAssets) * 1 ether / _amountDeposit[i] )
-                                    * 1 ether / assetPrice[i];
+                    userValueUsedRatio = (userRIMAssetsLendingNetAmount(user,_userRIMSetAssets) * 10000 / _amountDeposit[i] )
+                                       * 1 ether / assetPrice[i];
                     usefulAsset = licensedAssets(tokens[i]);
-                    userMaxUsedRatio = usefulAsset.maximumLTV * UPPER_SYSTEM_LIMIT() / nomalFloorOfHealthFactor();
+                    userMaxUsedRatio = usefulAsset.maximumLTV * 1 ether / nomalFloorOfHealthFactor();
                     tokenLiquidateRatio = usefulAsset.maximumLTV;
                     break;
                 }
             }
-            if(i == tokens.length){
-                userValueUsedRatio = 0;
-                usefulAsset = licensedAssets(_userRIMSetAssets);
-                userMaxUsedRatio = usefulAsset.maximumLTV * UPPER_SYSTEM_LIMIT() / nomalFloorOfHealthFactor();
-                tokenLiquidateRatio = usefulAsset.maximumLTV;
-            }
-        }else{
-            for(i=0;i<tokens.length;i++){
+        }else if(_mode == 0){
+            for(uint i=0;i<tokens.length;i++){
                 usefulAsset = licensedAssets(tokens[i]);
-                if(usefulAsset.lendingModeNum == iLendingManager(lendingManager).userMode(user)){
-                    tempRustFactor[1] += _amountDeposit[i] * assetPrice[i];
-                    tempRustFactor[2] += _amountLending[i] * assetPrice[i];
-                    
-                    if(_mode == 0){
-                        userMaxUsedRatio += usefulAsset.maximumLTV * UPPER_SYSTEM_LIMIT() / nomalFloorOfHealthFactor();
-                    }else{
-                        userMaxUsedRatio += usefulAsset.maximumLTV * UPPER_SYSTEM_LIMIT() / homogeneousFloorOfHealthFactor();
-
-                    }
-                    tokenLiquidateRatio += usefulAsset.maximumLTV;
-                    tempRustFactor[3] += 1;
+                if(usefulAsset.lendingModeNum != 1){
+                    tempRustFactor[1] += _amountDeposit[i] * assetPrice[i] / 1 ether;
+                    tempRustFactor[2] += _amountLending[i] * assetPrice[i] / 1 ether;
+                    userMaxUsedRatio += _amountDeposit[i] * assetPrice[i] * usefulAsset.maximumLTV / nomalFloorOfHealthFactor()
+                                    / 10000;
+                    tokenLiquidateRatio += _amountDeposit[i] * assetPrice[i] / 1 ether * usefulAsset.maximumLTV / 10000;
                 }
-                continue;
             }
-            if( i == tokens.length && tempRustFactor[3] > 0){
-                if(tempRustFactor[1] > 0){
-                    userValueUsedRatio = tempRustFactor[2] * UPPER_SYSTEM_LIMIT() / tempRustFactor[1];
-                }else{
-                    userValueUsedRatio = 0;
+            if(tempRustFactor[1] > 0){
+                userValueUsedRatio = tempRustFactor[2] * 10000 / tempRustFactor[1];
+                userMaxUsedRatio = userMaxUsedRatio * 10000 / tempRustFactor[1];
+                tokenLiquidateRatio = tokenLiquidateRatio * 10000/ tempRustFactor[1];
+            }else{
+                userValueUsedRatio = 0;
+                userMaxUsedRatio = 0;
+                tokenLiquidateRatio = 0;
+            }
+        }else if(_mode > 1){
+            for(uint i=0;i<tokens.length;i++){
+                usefulAsset = licensedAssets(tokens[i]);
+                if(usefulAsset.lendingModeNum == _mode){
+                    tempRustFactor[1] += _amountDeposit[i] * assetPrice[i] / 1 ether;
+                    tempRustFactor[2] += _amountLending[i] * assetPrice[i] / 1 ether;
+                    userMaxUsedRatio += _amountDeposit[i] * assetPrice[i] * usefulAsset.maximumLTV / homogeneousFloorOfHealthFactor()
+                                    / 10000;
+                    tokenLiquidateRatio += _amountDeposit[i] * assetPrice[i] / 1 ether * usefulAsset.maximumLTV / 10000;
                 }
-                userMaxUsedRatio = userMaxUsedRatio / tempRustFactor[3];
-                tokenLiquidateRatio = tokenLiquidateRatio / tempRustFactor[3];
-            }else if( i == tokens.length){
+            }
+            if(tempRustFactor[1] > 0){
+                userValueUsedRatio = tempRustFactor[2] * 10000 / tempRustFactor[1];
+                userMaxUsedRatio = userMaxUsedRatio * 10000 / tempRustFactor[1];
+                tokenLiquidateRatio = tokenLiquidateRatio * 10000 / tempRustFactor[1];
+            }else{
                 userValueUsedRatio = 0;
                 userMaxUsedRatio = 0;
                 tokenLiquidateRatio = 0;
             }
         }
     }
+
     function userProfile(address user) public view returns (int netWorth, int netApy){
         uint[5] memory tempRustFactor;
         uint8 _mode;
@@ -236,28 +242,17 @@ contract lendingInterface  {
         uint[] memory _amountLending;
         uint[] memory assetPrice = licensedAssetPrice();
         (tokens, _amountDeposit, _amountLending) = userAssetOverview(user);
-        
-        // uint _count;
-        iLendingManager.licensedAsset memory usefulAsset;
-        uint[] memory latestDepositInterest = new uint[](tokens.length);
-        uint[] memory latestLendingInterest = new uint[](tokens.length);
-        uint i;
-        for(i=0;i<tokens.length;i++){
-            usefulAsset = licensedAssets(tokens[i]);
-            if(usefulAsset.lendingModeNum == iLendingManager(lendingManager).userMode(user)){
-                tempRustFactor[0] += _amountDeposit[i];
-
-                tempRustFactor[1] += _amountDeposit[i] * assetPrice[i] / 1 ether;
-                tempRustFactor[2] += _amountLending[i] * assetPrice[i] / 1 ether;
-                (,,latestDepositInterest[i],latestLendingInterest[i]) = assetsTimeDependentParameter(tokens[i]);
-
-                tempRustFactor[3] += latestDepositInterest[i] * tempRustFactor[1];
-                tempRustFactor[4] += latestLendingInterest[i] * tempRustFactor[2];
-            }
+        uint  depositInterest;
+        uint  lendingInterest;
+        for(uint i=0;i<tokens.length;i++){
+            tempRustFactor[0] = tempRustFactor[0] + _amountDeposit[i];
+            tempRustFactor[1] = tempRustFactor[1] + _amountDeposit[i] * assetPrice[i] / 1 ether;
+            tempRustFactor[2] = tempRustFactor[2] + _amountLending[i] * assetPrice[i] / 1 ether;
+            (,,depositInterest,lendingInterest) = assetsTimeDependentParameter(tokens[i]);
+            tempRustFactor[3] = tempRustFactor[3] + depositInterest * _amountDeposit[i] * assetPrice[i] / 1 ether;
+            tempRustFactor[4] = tempRustFactor[4] + lendingInterest * _amountLending[i] * assetPrice[i] / 1 ether;
         }
-        for(i=0;i<tokens.length;i++){
-            netWorth = netWorth + int(tempRustFactor[1]) - int(tempRustFactor[2]);
-        }
+        netWorth = netWorth + int(tempRustFactor[1]) - int(tempRustFactor[2]);
         if(tempRustFactor[0] == 0){
             netApy = 0;
         }else{
@@ -319,5 +314,126 @@ contract lendingInterface  {
             IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
+    //-----------------------------------------Operation 2 can use CFX---------------------------------------------
+    //  Assets Deposit
+    function assetsDeposit2(address tokenAddr, uint amount) external payable {
+        if(tokenAddr == wcfx){
+            require(amount <= msg.value,"Lending Interface: amount should == msg.value");
+            iwxCFX(wcfx).deposit{value:amount}();
+        }else{
+            require(msg.value == 0,"Lending Interface: msg.value should == 0");
+            IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        }
+        
+        IERC20(tokenAddr).approve(lendingManager, amount);
+        iLendingManager(lendingManager).assetsDeposit(tokenAddr, amount, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    // Withdrawal of deposits
+    function withdrawDeposit2(address tokenAddr, uint amount) external{
+        iLendingManager(lendingManager).withdrawDeposit( tokenAddr, amount, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }
+        if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    function withdrawDepositMax2(address tokenAddr) external{
+        address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
+        uint tokenBalance = IERC20(depositAndLend[0]).balanceOf(address(msg.sender));
+        iLendingManager(lendingManager).withdrawDeposit( tokenAddr, tokenBalance, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }
+        if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    // lend Asset
+    function lendAsset2(address tokenAddr, uint amount) external{
+        iLendingManager(lendingManager).lendAsset( tokenAddr, amount, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }else if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    // repay Loan
+    function repayLoan2(address tokenAddr,uint amount) external payable {
+        if(tokenAddr == wcfx){
+            require(amount <= msg.value,"Lending Interface: amount should == msg.value");
+            iwxCFX(wcfx).deposit{value:amount}();
+        }else{
+            require(msg.value == 0,"Lending Interface: msg.value should == 0");
+            IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        }
+        IERC20(tokenAddr).approve(lendingManager, amount);
+        iLendingManager(lendingManager).repayLoan( tokenAddr, amount, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    function repayLoanMax2(address tokenAddr) external payable {
+        address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
+        uint tokenBalance = IERC20(depositAndLend[1]).balanceOf(address(msg.sender));
+        if(tokenAddr == wcfx){
+            require(tokenBalance <= msg.value,"Lending Interface: amount should == msg.value");
+            iwxCFX(wcfx).deposit{value:tokenBalance}();
+        }else{
+            require(msg.value == 0,"Lending Interface: msg.value should == 0");
+            IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
+        }
+        // IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
+        IERC20(tokenAddr).approve(lendingManager, tokenBalance);
+        iLendingManager(lendingManager).repayLoan( tokenAddr, tokenBalance, msg.sender);
+        if(IERC20(wcfx).balanceOf(address(this))>0){
+            iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
+        }
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        }
+        if(address(this).balance>0){
+            address payable receiver = payable(msg.sender); // Set receiver
+            (bool success, ) = receiver.call{value:address(this).balance}("");
+            require(success,"Lending Interface: CFX Transfer Failed");
+        }
+    }
+    // ======================== contract base methods =====================
+    fallback() external payable {}
+    receive() external payable {}
 
 }
