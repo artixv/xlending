@@ -101,7 +101,16 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         burnTokens = iLendingManager(manager).getCoinValues(address(this))[depositOrLoan];
 
         burnTokens = _value * 1 ether / burnTokens;
-        userOQCAmount[_account] -= burnTokens;
+        if(userOQCAmount[_account] - burnTokens > 0){
+            userOQCAmount[_account] -= burnTokens;
+        }else{
+            userOQCAmount[_account] = 0;
+        }
+        if(OQCtotalSupply - burnTokens > 0){
+            OQCtotalSupply -= burnTokens;
+        }else{
+            OQCtotalSupply = 0;
+        }
         OQCtotalSupply -= burnTokens;
 
         iRewardMini(rewardContract).recordUpdate(_account,userOQCAmount[_account]);
@@ -110,9 +119,9 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         emit Transfer(_account, address(0), _value);
     }
 
-    function burnAllCoin(address _account) public {
-        burnCoin( _account,balanceOf(_account));
-    }
+    // function burnAllCoin(address _account) public {
+    //     burnCoin( _account,balanceOf(_account));
+    // }
 
     //---------------------------------------------------------------------
     /**
