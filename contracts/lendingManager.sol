@@ -74,7 +74,7 @@ contract lendingManager  {
     address public riskIsolationModeAcceptAssets;
     mapping(address => uint8) public userMode; // High liquidity collateral mode:  0 ; 
                                                // Risk isolation mode              1 ;
-                                               // homogeneousMode:                 2  SLC  USDT  USDC; 96% 3%
+                                               // homogeneousMode:                 2  SLC  USDT  USDC; 97% 3%
                                                // homogeneousMode:                 3  CFX  xCFX sxCFX; 95% 5%
 
     //----------------------------modifier ----------------------------
@@ -82,6 +82,7 @@ contract lendingManager  {
         require(msg.sender == setter, 'Lending Manager: Only Setter Use');
         _;
     }
+
     //----------------------------- event -----------------------------
     event AssetsDeposit(address indexed tokenAddr, uint amount, address user);
     event WithdrawDeposit(address indexed tokenAddr, uint amount, address user);
@@ -99,7 +100,10 @@ contract lendingManager  {
     event LendingInterfaceSetup(address indexed _interface, bool _ToF);
     event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
     event SlcValue(address indexed slc, uint value);
-    event DepositAndLoanInterest(address indexed token, uint latestDepositInterest, uint latestLoanInterest, uint latestTimeStamp);
+    event DepositAndLoanInterest(address indexed token, 
+                                 uint latestDepositInterest, 
+                                 uint latestLoanInterest, 
+                                 uint latestTimeStamp);
     //------------------------------------------------------------------
 
     constructor() {
@@ -142,10 +146,12 @@ contract lendingManager  {
         coreAlgorithm = _coreAlgorithm;
         riskIsolationModeAcceptAssets = _riskIsolationModeAcceptAssets;
     }
+
     function setlendingInterface(address _interface, bool _ToF) external onlySetter{
         lendingInterface[_interface] = _ToF;
         emit LendingInterfaceSetup(_interface, _ToF);
     }
+    
     function setFloorOfHealthFactor(uint nomal, uint homogeneous) external onlySetter{
         nomalFloorOfHealthFactor = nomal;
         homogeneousFloorOfHealthFactor = homogeneous;
@@ -188,6 +194,7 @@ contract lendingManager  {
                                  _homogeneousModeLTV,
                                  _bestDepositInterestRate) ;
     }
+
     function licensedAssetsReset(address _asset,
                                 uint _maxLTV, 
                                 uint _liqPenalty,
@@ -253,9 +260,7 @@ contract lendingManager  {
                 licensedAssets[token].homogeneousModeLTV,
                 licensedAssets[token].bestDepositInterestRate);
     }
-    function assetsLiqPenaltyInfo(address token) public view returns(uint liqPenalty){
-        liqPenalty = licensedAssets[token].liquidationPenalty;
-    }
+
     function assetsTimeDependentParameter(address token) public view returns(uint latestDepositCoinValue,
                                                                              uint latestLendingCoinValue,
                                                                              uint latestDepositInterest,
@@ -265,6 +270,7 @@ contract lendingManager  {
                 assetInfos[token].latestDepositInterest,
                 assetInfos[token].latestLendingInterest);
     }
+
     function assetsDepositAndLendAddrs(address token) external view returns(address[2] memory addrs){
         return assetsDepositAndLend[token];
     }
@@ -276,6 +282,7 @@ contract lendingManager  {
             assetPrice[i] = iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]);
         }
     }
+
     function _userTotalLendingValue(address _user) internal view returns(uint values){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
@@ -283,6 +290,7 @@ contract lendingManager  {
             * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
     }
+
     function userDepositAndLendingValue(address user) public view returns(uint _amountDeposit,uint _amountLending){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         
@@ -332,43 +340,6 @@ contract lendingManager  {
             userHealthFactor = 0 ether;
         }
     }
-    // operator mode:  assetsDeposit 0, withdrawDeposit 1, lendAsset 2, repayLoan 3
-    function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
-        uint _amountDeposit;
-        uint _amountLending;
-
-        (_amountDeposit,_amountLending) = userDepositAndLendingValue( user);
-        if(operator == 0){
-            _amountDeposit += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
-        }else if(operator == 1){
-            _amountDeposit -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
-        }else if(operator == 2){
-            _amountLending += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
-        }else if(operator == 3){
-            _amountLending -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
-        }
-        if(_amountLending > 0){
-            userHealthFactor = _amountDeposit * 1 ether / _amountLending;
-        }else if(_amountDeposit > 0){
-            userHealthFactor = 1000 ether;
-        }else{
-            userHealthFactor = 0 ether;
-        }
-    }
-
-    // User's Lendable Limit
-    function viewUserLendableLimit(address user) public view returns(uint userLendableLimit){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
-        uint _amountDeposit;
-        uint _amountLending;
-        (_amountDeposit,_amountLending) = userDepositAndLendingValue( user);
-        if(userMode[user]>1){
-            userLendableLimit = _amountDeposit * 1 ether / nomalFloorOfHealthFactor - _amountLending;
-        }else{
-            userLendableLimit = _amountDeposit * 1 ether / homogeneousFloorOfHealthFactor - _amountLending;
-        }
-    }
 
     function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets){
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
@@ -377,6 +348,7 @@ contract lendingManager  {
             totalValueOfLendedAssets += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).totalSupply() * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
     }
+
     // 1 year = 31,536,000 s
     function getCoinValues(address token) public view returns(uint[2] memory currentValue){
         currentValue[0] = assetInfos[token].latestDepositCoinValue 
@@ -422,6 +394,7 @@ contract lendingManager  {
         assetInfos[token].latestTimeStamp = block.timestamp;
 
     }
+    
     function _assetsValueUpdate(address token) internal returns(uint[2] memory latestInterest){
         require(assetInfos[token].latestTimeStamp == block.timestamp,"Lending Manager: Only be uesd after beforeUpdate");
         latestInterest = iLendingCoreAlgorithm(coreAlgorithm).assetsValueUpdate(token);

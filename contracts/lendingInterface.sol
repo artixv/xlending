@@ -5,14 +5,17 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/iLendingManager.sol";
 import "./interfaces/iwxcfx.sol";
+import "./interfaces/islcoracle.sol";
 
 contract lendingInterface  {
     address public lendingManager;
     address public wcfx;
+    address public oracleAddr;
 
-    constructor(address _lendingManager, address _wcfx) {
+    constructor(address _lendingManager, address _wcfx, address _oracleAddr) {
         lendingManager = _lendingManager;
         wcfx = _wcfx;
+        oracleAddr = _oracleAddr;
     }
 
     //------------------------------------------------ View ----------------------------------------------------
@@ -23,9 +26,7 @@ contract lendingInterface  {
     function viewUsersHealthFactor(address user) public view returns(uint userHealthFactor){
         return iLendingManager(lendingManager).viewUsersHealthFactor(user);
     }
-    function viewUserLendableLimit(address user) external view returns(uint userLendableLimit){
-        return iLendingManager(lendingManager).viewUserLendableLimit( user);
-    }
+
     function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty){
         return iLendingManager(lendingManager).assetsLiqPenaltyInfo( token);
     }
@@ -123,12 +124,44 @@ contract lendingInterface  {
         }
         
     }
-    function usersHealthFactorEstimate(address user,
-                                       address token,
-                                       uint amount,
-                                       uint operator) external view returns(uint userHealthFactor){
-        return iLendingManager(lendingManager).usersHealthFactorEstimate(user, token, amount, operator);
+    // operator mode:  assetsDeposit 0, withdrawDeposit 1, lendAsset 2, repayLoan 3
+    function usersHealthFactorEstimate(address user,address token,uint amount,uint operator) external view returns(uint userHealthFactor){
+        // require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        uint _amountDeposit;
+        uint _amountLending;
+
+        (_amountDeposit,_amountLending) = iLendingManager(lendingManager).userDepositAndLendingValue( user);
+        if(operator == 0){
+            _amountDeposit += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 1){
+            _amountDeposit -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 2){
+            _amountLending += amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }else if(operator == 3){
+            _amountLending -= amount * iSlcOracle(oracleAddr).getPrice(token) / 1 ether;
+        }
+        if(_amountLending > 0){
+            userHealthFactor = _amountDeposit * 1 ether / _amountLending;
+        }else if(_amountDeposit > 0){
+            userHealthFactor = 1000 ether;
+        }else{
+            userHealthFactor = 0 ether;
+        }
     }
+    // User's Lendable Limit
+    function viewUserLendableLimit(address user) public view returns(uint userLendableLimit){
+        // require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        uint _amountDeposit;
+        uint _amountLending;
+        uint8 _userMode = iLendingManager(lendingManager).userMode(user);
+        (_amountDeposit,_amountLending) = iLendingManager(lendingManager).userDepositAndLendingValue( user);
+        if(_userMode>1){
+            userLendableLimit = _amountDeposit * 1 ether / nomalFloorOfHealthFactor() - _amountLending;
+        }else{
+            userLendableLimit = _amountDeposit * 1 ether / homogeneousFloorOfHealthFactor() - _amountLending;
+        }
+    }
+
     function assetsSerialNumber(uint num) public view returns(address){
         return iLendingManager(lendingManager).assetsSerialNumber(num);
     }
