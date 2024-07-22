@@ -530,14 +530,14 @@ contract lendingManager  {
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
         uint amountLending = iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).balanceOf(user);
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
-        require( amountLending >= liquidateAmount,"Lending Manager: amountLending >= liquidateAmount");
+        require( amountLending >= liquidateAmount,"Lending Manager: amountLending >= liquidateAmount");//Ensure that the liquidation quantity does not exceed the balance of the assets of the liquidated users
 
-        usedAmount = liquidateAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
+        usedAmount = liquidateAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;//Convert liquidation amount to liquidation amount * price
         usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
-                                  (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));
-        require( amountDeposit >= usedAmount,"Lending Manager: amountLending >= liquidateAmount");
+                                  (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
+        require( amountDeposit >= usedAmount,"Lending Manager: amountDeposit >= usedAmount");//Ensure that the number of deposited tokens deducted from liquidationPenalty by users is not greater than their outstanding debts
 
-        iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); 
+        iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); //
         IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
         IERC20(liquidateToken).transferFrom(lendingVault, msg.sender, liquidateAmount);
         iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmount);
@@ -553,21 +553,24 @@ contract lendingManager  {
         }
         uint amountliquidate = iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).balanceOf(user);
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
+        uint liquidateTokenPrice = iSlcOracle(oracleAddr).getPrice(liquidateToken);
+        uint depositTokenPrice = iSlcOracle(oracleAddr).getPrice(depositToken);
 
-        amountliquidate = amountliquidate * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
-        amountDeposit = amountDeposit * iSlcOracle(oracleAddr).getPrice(depositToken) / 1 ether
-                      * UPPER_SYSTEM_LIMIT / (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty);
+        uint liquidateMaxValue = amountliquidate * liquidateTokenPrice / 1 ether;//
+        uint depositMaxValue = amountDeposit * depositTokenPrice / 1 ether
+                      * UPPER_SYSTEM_LIMIT / (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty);//
 
-        if(amountliquidate < amountDeposit){
+        if(liquidateMaxValue < depositMaxValue){
             maxAmounts[0] = amountliquidate;
-            maxAmounts[1] = amountliquidate * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether 
-                                            / (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));
-        }else if(amountliquidate == amountDeposit){
+            maxAmounts[1] = liquidateMaxValue * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether 
+                                            / (UPPER_SYSTEM_LIMIT * depositTokenPrice);
+        }else if(liquidateMaxValue == depositMaxValue){
             maxAmounts[0] = amountliquidate;
             maxAmounts[1] = amountDeposit;
         }else{
+            maxAmounts[0] = depositMaxValue * 1 ether / depositTokenPrice;//At this point, this Token deposit of the liquidated user will be fully liquidated
             maxAmounts[1] = amountDeposit;
-            maxAmounts[0] = amountDeposit * 1 ether / iSlcOracle(oracleAddr).getPrice(depositToken);
+            
         }
     }
 }

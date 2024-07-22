@@ -115,12 +115,22 @@ contract lendingInterface  {
                                                                 uint[] memory _amountDeposit, 
                                                                 uint[] memory _amountLending,
                                                                 uint[] memory _depositInterest,
-                                                                uint[] memory _lendingInterest){
+                                                                uint[] memory _lendingInterest,
+                                                                uint[] memory _availableAmount){
         (tokens,_amountDeposit,_amountLending) = iLendingManager(lendingManager).userAssetOverview(user);
+        uint UserLendableLimit = viewUserLendableLimit(user);
+        uint[] memory assetsPrice= licensedAssetPrice();
         _depositInterest = new uint[](tokens.length);
         _lendingInterest = new uint[](tokens.length);
+        _availableAmount = new uint[](tokens.length);
         for(uint i=0;i<tokens.length;i++){
             (,,_depositInterest[i],_lendingInterest[i]) = assetsTimeDependentParameter(tokens[i]);
+            if(assetsPrice[i] > 0){
+                _availableAmount[i] = UserLendableLimit * 1 ether / assetsPrice[i];
+            }else{
+                _availableAmount[i] = 0;
+            }
+            
         }
         
     }
@@ -146,6 +156,9 @@ contract lendingInterface  {
             userHealthFactor = 1000 ether;
         }else{
             userHealthFactor = 0 ether;
+        }
+        if(userHealthFactor > 1000 ether){
+            userHealthFactor = 1000 ether;
         }
     }
     // User's Lendable Limit
