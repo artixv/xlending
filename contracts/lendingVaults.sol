@@ -56,7 +56,7 @@ contract lendingVaults  {
         uint amountD = iDepositOrLoanCoin(iLendingManager(lendingManager).assetsDepositAndLendAddrs(token)[0]).totalSupply();
         uint amountL = iDepositOrLoanCoin(iLendingManager(lendingManager).assetsDepositAndLendAddrs(token)[1]).totalSupply();
         require(IERC20(token).balanceOf(address(this)) > amountD - amountL,"Lending Manager: Cant Do Excess Disposal, asset not enough!");
-        IERC20(token).transfer(msg.sender,amountD - amountL- IERC20(token).balanceOf(address(this)));
+        IERC20(token).transfer(msg.sender,IERC20(token).balanceOf(address(this)) + amountL - amountD);
     }
 
     function vaultsERC20Approve(address ERC20Addr,uint amount) external onlyManager{

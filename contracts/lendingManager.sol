@@ -532,7 +532,7 @@ contract lendingManager  {
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
         require( amountLending >= liquidateAmount,"Lending Manager: amountLending >= liquidateAmount");
 
-        usedAmount  = usedAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
+        usedAmount = liquidateAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;
         usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
                                   (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));
         require( amountDeposit >= usedAmount,"Lending Manager: amountLending >= liquidateAmount");
