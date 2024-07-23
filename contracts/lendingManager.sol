@@ -574,7 +574,7 @@ contract lendingManager  {
             maxAmounts[0] = amountliquidate;
             maxAmounts[1] = amountDeposit;
         }else{
-            maxAmounts[0] = depositMaxValue * 1 ether / depositTokenPrice;//At this point, this Token deposit of the liquidated user will be fully liquidated
+            maxAmounts[0] = depositMaxValue * 1 ether / liquidateTokenPrice;//At this point, this Token deposit of the liquidated user will be fully liquidated
             maxAmounts[1] = amountDeposit;
             
         }
