@@ -527,6 +527,8 @@ contract lendingManager  {
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
         require(liquidateAmount > 0,"Lending Manager: Cant Pledge 0 amount");
+        _beforeUpdate(liquidateToken);
+        _beforeUpdate(depositToken);
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
         uint amountLending = iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).balanceOf(user);
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
@@ -537,8 +539,6 @@ contract lendingManager  {
                                   (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
         require( amountDeposit >= usedAmount,"Lending Manager: amountDeposit >= usedAmount");//Ensure that the number of deposited tokens deducted from liquidationPenalty by users is not greater than their outstanding debts
 
-        _beforeUpdate(liquidateToken);
-        _beforeUpdate(depositToken);
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); //
         IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
         IERC20(liquidateToken).transferFrom(lendingVault, msg.sender, liquidateAmount);
