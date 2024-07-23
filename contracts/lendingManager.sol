@@ -34,12 +34,12 @@ contract lendingManager  {
     uint    public homogeneousFloorOfHealthFactor;
 
     //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs  XUN
-    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%   50%
-    //  LiqPenalty:          3%    5%    5%   5%   5%   5%   5%    5%   5%   5%    6%
+    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%   45%
+    //  LiqPenalty:          3%    4%    4%   5%   5%   5%   5%    5%   5%   5%    6%
     //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6   1e6
-    //bestLendingRatio:      85%  80%   80%  70%  70%  65%  65%   65%  50%  50%   40%
+    //bestLendingRatio:      80%  76%   76%  70%  70%  65%  65%   65%  50%  50%   40%
     //lendingModeNum:         2     2     2    0    0    3    3     3    1    1    1
-    //homogeneousModeLTV:    97%  97%   97%  88%  85%  95%  95%   95%  55%  55%   50%
+    //homogeneousModeLTV:    97%  97%   97%  88%  85%  95%  95%   95%  55%  55%   45%
     //bestDepositInterestRate 4%   4%    4%  4.5% 4.6%  5.2% 5.2%  5.2% 6%   6%  6.2% 
 
 
@@ -439,7 +439,7 @@ contract lendingManager  {
         // }else {
         //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         // }
-        //need + vualt add accept amount function (only manager)
+        // need + vualt add accept amount function (only manager)
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         _beforeUpdate(tokenAddr);
         IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);

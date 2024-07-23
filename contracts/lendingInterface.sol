@@ -306,6 +306,33 @@ contract lendingInterface  {
         }
     }
 
+    function generalParametersOfAllAssets() public view returns (address[] memory tokens, 
+                                                                 uint[] memory totalSupplied, 
+                                                                 uint[] memory totalBorrowed,
+                                                                 uint[] memory supplyApy,
+                                                                 uint[] memory borrowApy,
+                                                                 uint[] memory assetsPrice,
+                                                                 uint8[] memory tokenMode){
+        (tokens,,) = iLendingManager(lendingManager).userAssetOverview(address(0));
+        totalSupplied = new uint[](tokens.length);
+        totalBorrowed = new uint[](tokens.length);
+        supplyApy = new uint[](tokens.length);
+        borrowApy = new uint[](tokens.length);
+        assetsPrice= licensedAssetPrice();
+        tokenMode = new uint8[](tokens.length);
+        iLendingManager.licensedAsset memory usefulAsset;
+        uint[2] memory tempAmounts;
+
+        for(uint i=0;i<tokens.length;i++){
+            (,,supplyApy[i],borrowApy[i]) = assetsTimeDependentParameter(tokens[i]);
+            usefulAsset = licensedAssets(tokens[i]);
+            tokenMode[i] = usefulAsset.lendingModeNum;
+            tempAmounts = assetsDepositAndLendAmount(tokens[i]);
+            totalSupplied[i] = tempAmounts[0];
+            totalBorrowed[i] = tempAmounts[1];
+        }
+    }
+
     //------------------------------------------------Operation----------------------------------------------------
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress) external{
         iLendingManager(lendingManager).userModeSetting( _mode, _userRIMAssetsAddress, msg.sender);
