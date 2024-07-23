@@ -431,13 +431,14 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
-        if(userMode[user] == 0){
-            require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        }else if(userMode[user] == 1){
-            require((tokenAddr == userRIMAssetsAddress[user]),"Lending Manager: Wrong Token in Risk Isolation Mode");
-        }else {
-            require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
-        }
+        // There is no need to check the mode
+        // if(userMode[user] == 0){
+        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+        // }else if(userMode[user] == 1){
+        //     require((tokenAddr == userRIMAssetsAddress[user]),"Lending Manager: Wrong Token in Risk Isolation Mode");
+        // }else {
+        //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
+        // }
         //need + vualt add accept amount function (only manager)
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         _beforeUpdate(tokenAddr);
@@ -499,20 +500,21 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
-        if(userMode[user] == 0){
-            require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        }else if(userMode[user] == 1){
-            require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-            require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
-            riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
-                                                         - userRIMAssetsLendingNetAmount[user][tokenAddr]
-                                                         + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                         - amount;
-            userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                           - amount;
-        }else {
-            require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
-        }
+        //There is no need to check the mode
+        // if(userMode[user] == 0){
+        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+        // }else if(userMode[user] == 1){
+        //     require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+        //     require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
+        //     riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
+        //                                                  - userRIMAssetsLendingNetAmount[user][tokenAddr]
+        //                                                  + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
+        //                                                  - amount;
+        //     userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
+        //                                                    - amount;
+        // }else {
+        //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
+        // }
         _beforeUpdate(tokenAddr);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amount);
         IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
