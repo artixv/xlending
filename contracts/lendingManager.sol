@@ -537,11 +537,17 @@ contract lendingManager  {
                                   (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
         require( amountDeposit >= usedAmount,"Lending Manager: amountDeposit >= usedAmount");//Ensure that the number of deposited tokens deducted from liquidationPenalty by users is not greater than their outstanding debts
 
+        _beforeUpdate(liquidateToken);
+        _beforeUpdate(depositToken);
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); //
         IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
         IERC20(liquidateToken).transferFrom(lendingVault, msg.sender, liquidateAmount);
         iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmount);
         iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).burnCoin(user,usedAmount);
+        _assetsValueUpdate(liquidateToken);
+        _assetsValueUpdate(depositToken);
+        emit AssetsDeposit(liquidateToken, liquidateAmount, user);
+        emit RepayLoan(depositToken, usedAmount, user);
     }
     
     function tokenLiquidateEstimate(address user,
