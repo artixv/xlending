@@ -502,7 +502,7 @@ contract lendingManager  {
         if(userMode[user] == 0){
             require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
         }else if(userMode[user] == 1){
-            require(licensedAssets[tokenAddr].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+            require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
             require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
             riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
                                                          - userRIMAssetsLendingNetAmount[user][tokenAddr]
