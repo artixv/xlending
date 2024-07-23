@@ -515,6 +515,16 @@ contract lendingManager  {
         // }else {
         //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         // }
+        if(userMode[user] == 1){
+            require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+            require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
+            riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
+                                                         - userRIMAssetsLendingNetAmount[user][tokenAddr]
+                                                         + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
+                                                         - amount;
+            userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
+                                                           - amount;
+        }
         _beforeUpdate(tokenAddr);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amount);
         IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
