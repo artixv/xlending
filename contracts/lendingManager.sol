@@ -25,6 +25,7 @@ contract lendingManager  {
     address public coinFactory;
     address public lendingVault;
     address public coreAlgorithm;
+    address public lendingInterface;
 
     address public setter;
     address newsetter;
@@ -68,7 +69,7 @@ contract lendingManager  {
     mapping(address => licensedAsset) public licensedAssets;
     mapping(address => address[2]) public assetsDepositAndLend;
     address[] public assetsSerialNumber;
-    mapping(address => bool) public lendingInterface;
+    
     mapping(address => assetInfo) public assetInfos;
     mapping(address => mapping(address => uint)) public userRIMAssetsLendingNetAmount;
     mapping(address => uint) public riskIsolationModeLendingNetAmount; //RIM  Risk Isolation Mode
@@ -99,7 +100,7 @@ contract lendingManager  {
                                 uint _homogeneousModeLTV,
                                 uint _bestDepositInterestRate) ;
     event UserModeSetting(address indexed user,uint8 _mode,address _userRIMAssetsAddress);
-    event LendingInterfaceSetup(address indexed _interface, bool _ToF);
+    event LendingInterfaceSetup(address indexed _interface);
     event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
     event SlcValue(address indexed slc, uint value);
     event DepositAndLoanInterest(address indexed token, 
@@ -152,10 +153,10 @@ contract lendingManager  {
         riskIsolationModeAcceptAssets = _riskIsolationModeAcceptAssets;
     }
 
-    function setlendingInterface(address _interface, bool _ToF) external onlySetter{
+    function updatelendingInterface(address _interface) external onlySetter{
         require(isContract(_interface),"Lending Manager: Interface MUST be a contract.");
-        lendingInterface[_interface] = _ToF;
-        emit LendingInterfaceSetup(_interface, _ToF);
+        lendingInterface = _interface;
+        emit LendingInterfaceSetup(_interface);
     }
     
     function setFloorOfHealthFactor(uint nomal, uint homogeneous) external onlySetter{
@@ -228,8 +229,8 @@ contract lendingManager  {
     }
 
     function userModeSetting(uint8 _mode,address _userRIMAssetsAddress, address user) public {
-        if(lendingInterface[msg.sender] == false){
-            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        if(lendingInterface != msg.sender){
+            require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(_userTotalLendingValue(user) == 0 && _userTotalDepositValue(user) == 0,"Lending Manager: should return all Lending Assets and withdraw all Deposit Assets.");
         // require(_userTotalDepositValue(user) == 0,"Lending Manager: Cant Change Mode before withdraw all Deposit Assets.");
@@ -427,8 +428,8 @@ contract lendingManager  {
 
     //  Assets Deposit
     function assetsDeposit(address tokenAddr, uint amount, address user) public  {
-        if(lendingInterface[msg.sender]==false){
-            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        if(lendingInterface != msg.sender){
+            require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
         if(userMode[user] == 0){
@@ -448,8 +449,8 @@ contract lendingManager  {
 
     // Withdrawal of deposits
     function withdrawDeposit(address tokenAddr, uint amount, address user) public  {
-        if(lendingInterface[msg.sender]==false){
-            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        if(lendingInterface != msg.sender){
+            require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
         // There is no need to check the mode
@@ -480,8 +481,8 @@ contract lendingManager  {
 
     // lend Asset
     function lendAsset(address tokenAddr, uint amount, address user) public  {
-        if(lendingInterface[msg.sender]==false){
-            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        if(lendingInterface != msg.sender){
+            require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
         // if(userMode[user] == 0){
@@ -519,8 +520,8 @@ contract lendingManager  {
 
     // repay Loan
     function repayLoan(address tokenAddr,uint amount, address user) public  {
-        if(lendingInterface[msg.sender]==false){
-            require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
+        if(lendingInterface != msg.sender){
+            require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
         //There is no need to check the mode
