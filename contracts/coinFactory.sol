@@ -27,7 +27,7 @@ contract coinFactory  {
     event LoanCoinCreatedX(address indexed token, address LoanCoin);
     //----------------------------- functions -----------------------------
     function createDeAndLoCoin(address token) external returns (address[2] memory _pAndLCoin) {
-
+        require(msg.sender == lendingManager, 'Coin Factory: msg.sender MUST be lendingManager.');
         require(token != address(0), 'Coin Factory: ZERO_ADDRESS');
         require(getDepositCoin[token] == address(0), 'Coin Factory: COIN_EXISTS');// single check is sufficient
         require(lendingManager != address(0), 'Coin Factory: Coin manager NOT Set');
