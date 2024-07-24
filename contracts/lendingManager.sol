@@ -33,6 +33,8 @@ contract lendingManager  {
     uint    public nomalFloorOfHealthFactor;
     uint    public homogeneousFloorOfHealthFactor;
 
+    address public badDebtCollectionAddress;
+
     //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs  XUN
     //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%   45%
     //  LiqPenalty:          3%    4%    4%   5%   5%   5%   5%    5%   5%   5%    6%
@@ -119,6 +121,9 @@ contract lendingManager  {
         slcValue = newValue;
         emit SlcValue(superLibraCoin,newValue);
     }
+    function setBadDebtCollectionAddress(address _badDebtCollectionAddress) external onlySetter{
+        badDebtCollectionAddress = _badDebtCollectionAddress;
+    }
 
     function transferSetter(address _set) external onlySetter{
         newsetter = _set;
@@ -148,6 +153,7 @@ contract lendingManager  {
     }
 
     function setlendingInterface(address _interface, bool _ToF) external onlySetter{
+        require(isContract(_interface),"Lending Manager: Interface MUST be a contract.");
         lendingInterface[_interface] = _ToF;
         emit LendingInterfaceSetup(_interface, _ToF);
     }
@@ -234,6 +240,13 @@ contract lendingManager  {
         userRIMAssetsAddress[user] = _userRIMAssetsAddress;
         emit UserModeSetting(user, _mode, _userRIMAssetsAddress);
     }
+
+    function isContract(address account) internal view returns (bool) {
+        bytes32 codehash;
+        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+        assembly { codehash := extcodehash(account) }
+        return (codehash != 0x0 && codehash != accountHash);
+    }
     //     licensedAssets[_asset].assetAddr = _asset;
     //     licensedAssets[_asset].maximumLTV = _maxLTV;
     //     licensedAssets[_asset].liquidationPenalty = _liqPenalty;
@@ -287,6 +300,13 @@ contract lendingManager  {
         require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(_user) 
+            * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
+        }
+    }
+    function _userTotalDepositValue(address _user) internal view returns(uint values){
+        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        for(uint i=0;i<assetsSerialNumber.length;i++){
+            values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(_user) 
             * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
     }
@@ -531,6 +551,17 @@ contract lendingManager  {
         _assetsValueUpdate(tokenAddr);
         emit RepayLoan(tokenAddr, amount, user);
     }
+    //------------------------------------------------------------------------------
+    function badDebtDeduction(address user) public {
+        require(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100,"Lending Manager: should be bad debt.");
+        for(uint i=0;i<assetsSerialNumber.length;i++){
+            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
+            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
+            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
+            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
+        }
+
+    }
 
     //------------------------------ Liquidate Function------------------------------
     // token Liquidate
@@ -538,6 +569,7 @@ contract lendingManager  {
                             address liquidateToken,
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
+        require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
         require(liquidateAmount > 0,"Lending Manager: Cant Pledge 0 amount");
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
