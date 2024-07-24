@@ -181,7 +181,7 @@ contract lendingManager  {
                 && _bestDepositInterestRate < UPPER_SYSTEM_LIMIT,"Lending Manager: Exceed UPPER_SYSTEM_LIMIT");
         require(licensedAssets[_asset].assetAddr == address(0),"Lending Manager: Asset already registered!");
         assetsSerialNumber.push(_asset);
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        require(assetsSerialNumber.length < 50,"Lending Manager: Too Much assets");
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = _maxLTV;
         licensedAssets[_asset].liquidationPenalty = _liqPenalty;
@@ -231,7 +231,8 @@ contract lendingManager  {
         if(lendingInterface[msg.sender] == false){
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
-        require(_userTotalLendingValue(user) == 0,"Lending Manager: Cant Change Mode before return all Lending Assets.");
+        require(_userTotalLendingValue(user) == 0 && _userTotalDepositValue(user) == 0,"Lending Manager: should return all Lending Assets and withdraw all Deposit Assets.");
+        // require(_userTotalDepositValue(user) == 0,"Lending Manager: Cant Change Mode before withdraw all Deposit Assets.");
         if(_mode == 1){
             require(licensedAssets[_userRIMAssetsAddress].maxLendingAmountInRIM > 0,"Lending Manager: Mode 1 Need a RIMAsset.");
         }
@@ -290,21 +291,21 @@ contract lendingManager  {
 
     function licensedAssetPrice() public view returns(uint[] memory assetPrice){
         assetPrice = new uint[](assetsSerialNumber.length);
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             assetPrice[i] = iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]);
         }
     }
 
     function _userTotalLendingValue(address _user) internal view returns(uint values){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(_user) 
             * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
     }
     function _userTotalDepositValue(address _user) internal view returns(uint values){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             values += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(_user) 
             * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
@@ -312,7 +313,7 @@ contract lendingManager  {
     }
 
     function userDepositAndLendingValue(address user) public view returns(uint _amountDeposit,uint _amountLending){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(userMode[user]==1 && assetsSerialNumber[i] == userRIMAssetsAddress[user]){
@@ -335,7 +336,7 @@ contract lendingManager  {
             }
             if(userMode[user]==0){
                 if(licensedAssets[assetsSerialNumber[i]].maxLendingAmountInRIM > 0){
-                    continue;
+                    require(iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)==0,"Lending Manager: Mode 0 cant deposited isolate asset.");
                 }
                 _amountDeposit += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
@@ -347,7 +348,7 @@ contract lendingManager  {
     }
 
     function viewUsersHealthFactor(address user) public view returns(uint userHealthFactor){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        // //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         uint _amountDeposit;
         uint _amountLending;
 
@@ -362,7 +363,7 @@ contract lendingManager  {
     }
 
     function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, uint totalValueOfLendedAssets){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             totalValueOfMortgagedAssets += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).totalSupply() * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
             totalValueOfLendedAssets += IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).totalSupply() * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
@@ -388,7 +389,7 @@ contract lendingManager  {
     }
 
     function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory _amountDeposit, uint[] memory _amountLending){
-        require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
+        //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
         _amountDeposit = new uint[](assetsSerialNumber.length);
         _amountLending = new uint[](assetsSerialNumber.length);
         tokens = new address[](assetsSerialNumber.length);
@@ -562,7 +563,6 @@ contract lendingManager  {
             iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
             iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
         }
-
     }
 
     //------------------------------ Liquidate Function------------------------------
