@@ -483,9 +483,10 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
-        if(userMode[user] == 0){
-            require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        }else if(userMode[user] == 1){
+        // if(userMode[user] == 0){
+        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
+        // }else 
+        if(userMode[user] == 1){
             require(tokenAddr == riskIsolationModeAcceptAssets,"Lending Manager: Wrong Token in Risk Isolation Mode");
             riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
                                                          - userRIMAssetsLendingNetAmount[user][tokenAddr]
@@ -494,7 +495,8 @@ contract lendingManager  {
             userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
                                                            + amount;
             require(riskIsolationModeLendingNetAmount[tokenAddr] <= licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM,"Lending Manager: Deposit Amount exceed limits");
-        }else {
+        }
+        if(userMode[user] > 1){
             require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         }
         _beforeUpdate(tokenAddr);
