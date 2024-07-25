@@ -572,10 +572,11 @@ contract lendingManager  {
                             address liquidateToken,
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
-        require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
-        require(liquidateAmount > 0,"Lending Manager: Cant Pledge 0 amount");
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
+        require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
+        require(liquidateAmount > 0,"Lending Manager: Cant Pledge 0 amount");
+        
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
         uint amountLending = iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).balanceOf(user);
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
