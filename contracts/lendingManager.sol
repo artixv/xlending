@@ -336,12 +336,12 @@ contract lendingManager  {
                 continue;
             }
             if(userMode[user]==0){
-                if(licensedAssets[assetsSerialNumber[i]].maxLendingAmountInRIM > 0){
-                    require(iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)==0,"Lending Manager: Mode 0 cant deposited isolate asset.");
+                if(licensedAssets[assetsSerialNumber[i]].maxLendingAmountInRIM == 0){
+                    // require(iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)==0,"Lending Manager: Mode 0 cant deposited isolate asset.");
+                    _amountDeposit += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
+                                    * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                                    * licensedAssets[assetsSerialNumber[i]].maximumLTV / UPPER_SYSTEM_LIMIT;
                 }
-                _amountDeposit += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)
-                                * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
-                                * licensedAssets[assetsSerialNumber[i]].maximumLTV / UPPER_SYSTEM_LIMIT;
                 _amountLending += iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)
                                 * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
             }
