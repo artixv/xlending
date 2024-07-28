@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
-// First Release Time : 2024.06.30
+// First Release Time : 2024.07.30
 
 pragma solidity ^0.8.0;
 
@@ -40,8 +40,8 @@ interface iLendingManager{
     function assetsDepositAndLendAddrs(address) external view returns (address[2] memory);
     // address[] public assetsSerialNumber;
     function assetsSerialNumber(uint) external view returns(address);
-    // mapping(address => bool) public lendingInterface;
-    function lendingInterface(address) external view returns (bool);
+    // address  public lendingInterface;
+    function lendingInterface() external view returns (address);
     // mapping(address => assetInfo) public assetInfos;
     // function assetInfos(address) external view returns (assetInfo memory);
     // mapping(address => mapping(address => uint)) public userRIMAssetsLendingNetAmount;

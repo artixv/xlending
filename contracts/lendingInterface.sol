@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
-// First Release Time : 2024.06.30
+// First Release Time : 2024.07.30
 
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -39,7 +39,7 @@ contract lendingInterface  {
         depositAndLendAmount[0] = IERC20(depositAndLend[0]).totalSupply();
         depositAndLendAmount[1] = IERC20(depositAndLend[1]).totalSupply();
     }
-    function lendAvailableAmount() external view returns (uint[] memory availableAmount){
+    function lendAvailableAmount() public view returns (uint[] memory availableAmount){
         uint[] memory assetPrice = licensedAssetPrice();
         availableAmount = new uint[](assetPrice.length);
         uint[2] memory depositAndLendAmount;
@@ -111,7 +111,7 @@ contract lendingInterface  {
                                                                    uint[] memory _amountLending){
         return iLendingManager(lendingManager).userAssetOverview( user);
     }
-    function userAssetDetail(address user) external view returns(address[] memory tokens, 
+    function userAssetDetail(address user) public view returns(address[] memory tokens, 
                                                                 uint[] memory _amountDeposit, 
                                                                 uint[] memory _amountLending,
                                                                 uint[] memory _depositInterest,
@@ -123,6 +123,7 @@ contract lendingInterface  {
         _depositInterest = new uint[](tokens.length);
         _lendingInterest = new uint[](tokens.length);
         _availableAmount = new uint[](tokens.length);
+        uint[] memory _availableAmount2 = lendAvailableAmount();
         for(uint i=0;i<tokens.length;i++){
             (,,_depositInterest[i],_lendingInterest[i]) = assetsTimeDependentParameter(tokens[i]);
             if(assetsPrice[i] > 0){
@@ -130,6 +131,10 @@ contract lendingInterface  {
             }else{
                 _availableAmount[i] = 0;
             }
+            // if(_availableAmount[i] > _availableAmount2[i]){
+            //     _availableAmount[i] == _availableAmount2[i];
+            // }
+            _availableAmount[i] = (_availableAmount[i] < _availableAmount2[i] ? _availableAmount[i] : _availableAmount2[i]);
             
         }
         
@@ -302,7 +307,7 @@ contract lendingInterface  {
         if(tempRustFactor[0] == 0){
             netApy = 0;
         }else{
-            netApy = (int(tempRustFactor[3]) - int(tempRustFactor[4])) / int(tempRustFactor[0]);
+            netApy = (int(tempRustFactor[3]) - int(tempRustFactor[4])) / netWorth;
         }
     }
 
