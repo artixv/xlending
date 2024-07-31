@@ -18,10 +18,10 @@ contract lendingManager  {
     uint public constant UPPER_SYSTEM_LIMIT = 10000;
 
     address public superLibraCoin;
-    uint    public slcValue;
+    // uint    public slcValue;
     uint    public slcUnsecuredIssuancesAmount;
 
-    address public xInterface;
+    // address public xInterface;
     address public oracleAddr;
     address public coinFactory;
     address public lendingVault;
@@ -103,7 +103,7 @@ contract lendingManager  {
     event UserModeSetting(address indexed user,uint8 _mode,address _userRIMAssetsAddress);
     event LendingInterfaceSetup(address indexed _interface);
     event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
-    event SlcValue(address indexed slc, uint value);
+    // event SlcValue(address indexed slc, uint value);
     event DepositAndLoanInterest(address indexed token, 
                                  uint latestDepositInterest, 
                                  uint latestLoanInterest, 
@@ -112,17 +112,17 @@ contract lendingManager  {
 
     constructor() {
         setter = msg.sender;
-        slcValue = 1 ether;
+        // slcValue = 1 ether;
         rebalancer = msg.sender;
         nomalFloorOfHealthFactor = 1.2 ether;
         homogeneousFloorOfHealthFactor = 1.03 ether;
     }
 
     // Evaluate the value of superLibraCoin
-    function slcValueRevaluate(uint newValue) public  onlySetter {
-        slcValue = newValue;
-        emit SlcValue(superLibraCoin,newValue);
-    }
+    // function slcValueRevaluate(uint newValue) public  onlySetter {
+    //     slcValue = newValue;
+    //     emit SlcValue(superLibraCoin,newValue);
+    // }
     function setBadDebtCollectionAddress(address _badDebtCollectionAddress) external onlySetter{
         badDebtCollectionAddress = _badDebtCollectionAddress;
     }
@@ -139,7 +139,7 @@ contract lendingManager  {
     }
     
     function setup( address _superLibraCoin,
-                    address _xInterface,
+                    // address _xInterface,
                     address _coinFactory,
                     address _lendingVault,
                     address _riskIsolationModeAcceptAssets,
@@ -147,7 +147,7 @@ contract lendingManager  {
                     address _oracleAddr ) external onlySetter{
         superLibraCoin = _superLibraCoin;
         coinFactory = _coinFactory;
-        xInterface = _xInterface;
+        // xInterface = _xInterface;
         oracleAddr = _oracleAddr;
         lendingVault = _lendingVault;
         coreAlgorithm = _coreAlgorithm;
@@ -297,9 +297,10 @@ contract lendingManager  {
     }
 
     function licensedAssetPrice() public view returns(uint[] memory assetPrice){
-        assetPrice = new uint[](assetsSerialNumber.length);
+        uint assetLength = assetsSerialNumber.length;
+        assetPrice = new uint[](assetLength);
         //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
-        for(uint i=0;i<assetsSerialNumber.length;i++){
+        for(uint i=0;i<assetLength;i++){
             assetPrice[i] = iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]);
         }
     }
@@ -397,10 +398,11 @@ contract lendingManager  {
 
     function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory _amountDeposit, uint[] memory _amountLending){
         //require(assetsSerialNumber.length < 100,"Lending Manager: Too Much assets");
-        _amountDeposit = new uint[](assetsSerialNumber.length);
-        _amountLending = new uint[](assetsSerialNumber.length);
-        tokens = new address[](assetsSerialNumber.length);
-        for(uint i=0;i<assetsSerialNumber.length;i++){
+        uint assetLength = assetsSerialNumber.length;
+        _amountDeposit = new uint[](assetLength);
+        _amountLending = new uint[](assetLength);
+        tokens = new address[](assetLength);
+        for(uint i=0;i<assetLength;i++){
             tokens[i] = assetsSerialNumber[i];
             _amountDeposit[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user);
             _amountLending[i] = iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user);

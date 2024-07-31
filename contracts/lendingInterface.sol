@@ -41,9 +41,10 @@ contract lendingInterface  {
     }
     function lendAvailableAmount() public view returns (uint[] memory availableAmount){
         uint[] memory assetPrice = licensedAssetPrice();
-        availableAmount = new uint[](assetPrice.length);
+        uint assetLength = assetPrice.length;
+        availableAmount = new uint[](assetLength);
         uint[2] memory depositAndLendAmount;
-        for(uint i=0;i<assetPrice.length;i++){
+        for(uint i=0;i<assetLength;i++){
             depositAndLendAmount = assetsDepositAndLendAmount(assetsSerialNumber(i));
             if(depositAndLendAmount[0]>depositAndLendAmount[1]){
                 availableAmount[i] = depositAndLendAmount[0] - depositAndLendAmount[1];
