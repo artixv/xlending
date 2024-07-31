@@ -58,7 +58,7 @@ interface iLendingManager{
     function getCoinValues(address token) external view returns (uint[2] memory price);
     function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor);
     // function viewUserLendableLimit(address user) external view returns(uint userLendableLimit);
-    function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty);
+    // function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty);
 
     
     // function assetsBaseInfo(address token) external view returns(uint maximumLTV,uint bestLendingRatio,uint lendingModeNum,uint bestDepositInterestRate);

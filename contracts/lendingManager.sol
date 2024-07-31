@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ixinterface.sol";
 import "./interfaces/islcoracle.sol";
+import "./interfaces/iDecimals.sol";
 
 import "./interfaces/iCoinFactory.sol";
 import "./interfaces/iDepositOrLoanCoin.sol";
@@ -176,7 +177,6 @@ contract lendingManager  {
         require(   _maxLTV < UPPER_SYSTEM_LIMIT
                 && _liqPenalty <= UPPER_SYSTEM_LIMIT/5
                 && _bestLendingRatio < UPPER_SYSTEM_LIMIT
-                && _homogeneousModeLTV >= _maxLTV
                 && _homogeneousModeLTV < UPPER_SYSTEM_LIMIT
                 && _bestDepositInterestRate > 0
                 && _bestDepositInterestRate < UPPER_SYSTEM_LIMIT,"Lending Manager: Exceed UPPER_SYSTEM_LIMIT");
@@ -211,6 +211,12 @@ contract lendingManager  {
                                 uint _homogeneousModeLTV,
                                 uint _bestDepositInterestRate) public onlySetter {
         require(licensedAssets[_asset].assetAddr == _asset,"Lending Manager: asset is Not registered!");
+        require(   _maxLTV < UPPER_SYSTEM_LIMIT
+                && _liqPenalty <= UPPER_SYSTEM_LIMIT/5
+                && _bestLendingRatio < UPPER_SYSTEM_LIMIT
+                && _homogeneousModeLTV < UPPER_SYSTEM_LIMIT
+                && _bestDepositInterestRate > 0
+                && _bestDepositInterestRate < UPPER_SYSTEM_LIMIT,"Lending Manager: Exceed UPPER_SYSTEM_LIMIT");
         licensedAssets[_asset].maximumLTV = _maxLTV;
         licensedAssets[_asset].liquidationPenalty = _liqPenalty;
         licensedAssets[_asset].maxLendingAmountInRIM = _maxLendingAmountInRIM;
@@ -428,6 +434,7 @@ contract lendingManager  {
 
     //  Assets Deposit
     function assetsDeposit(address tokenAddr, uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
@@ -439,9 +446,10 @@ contract lendingManager  {
         }else {
             require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         }
+
         _beforeUpdate(tokenAddr);
         IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
-        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).mintCoin(user,amount);
+        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).mintCoin(user,amountNormalize);
         _assetsValueUpdate(tokenAddr);
         emit AssetsDeposit(tokenAddr, amount, user);
     
@@ -449,23 +457,17 @@ contract lendingManager  {
 
     // Withdrawal of deposits
     function withdrawDeposit(address tokenAddr, uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
         // There is no need to check the mode
-        // if(userMode[user] == 0){
-        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        // }else if(userMode[user] == 1){
-        //     require((tokenAddr == userRIMAssetsAddress[user]),"Lending Manager: Wrong Token in Risk Isolation Mode");
-        // }else {
-        //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
-        // }
-        // need + vualt add accept amount function (only manager)
+
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         _beforeUpdate(tokenAddr);
         IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
-        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).burnCoin(user,amount);
+        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).burnCoin(user,amountNormalize);
         _assetsValueUpdate(tokenAddr);
         
         uint factor;
@@ -481,6 +483,8 @@ contract lendingManager  {
 
     // lend Asset
     function lendAsset(address tokenAddr, uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
@@ -493,17 +497,17 @@ contract lendingManager  {
             riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
                                                          - userRIMAssetsLendingNetAmount[user][tokenAddr]
                                                          + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                         + amount;
+                                                         + amountNormalize;
             userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                           + amount;
+                                                           + amountNormalize;
             require(riskIsolationModeLendingNetAmount[tokenAddr] <= licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM,"Lending Manager: Deposit Amount exceed limits");
         }
         if(userMode[user] > 1){
             require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
         }
         _beforeUpdate(tokenAddr);
+        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).mintCoin(user,amountNormalize);
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
-        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).mintCoin(user,amount);
         IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
         _assetsValueUpdate(tokenAddr);
 
@@ -520,37 +524,25 @@ contract lendingManager  {
 
     // repay Loan
     function repayLoan(address tokenAddr,uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
-        //There is no need to check the mode
-        // if(userMode[user] == 0){
-        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        // }else if(userMode[user] == 1){
-        //     require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        //     require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
-        //     riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
-        //                                                  - userRIMAssetsLendingNetAmount[user][tokenAddr]
-        //                                                  + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-        //                                                  - amount;
-        //     userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-        //                                                    - amount;
-        // }else {
-        //     require((licensedAssets[tokenAddr].lendingModeNum == userMode[user]),"Lending Manager: Wrong Mode, Need in same homogeneous Mode");
-        // }
+
         if(userMode[user] == 1){
             require(licensedAssets[userRIMAssetsAddress[user]].maxLendingAmountInRIM > 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
             require((tokenAddr == riskIsolationModeAcceptAssets),"Lending Manager: Wrong Token in Risk Isolation Mode");
             riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
                                                          - userRIMAssetsLendingNetAmount[user][tokenAddr]
                                                          + IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                         - amount;
+                                                         - amountNormalize;
             userRIMAssetsLendingNetAmount[user][tokenAddr] = IERC20(assetsDepositAndLend[riskIsolationModeAcceptAssets][1]).balanceOf(user)
-                                                           - amount;
+                                                           - amountNormalize;
         }
         _beforeUpdate(tokenAddr);
-        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amount);
+        iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amountNormalize);
         IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
         _assetsValueUpdate(tokenAddr);
         emit RepayLoan(tokenAddr, amount, user);
@@ -572,20 +564,24 @@ contract lendingManager  {
                             address liquidateToken,
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
+        uint liquidateAmountNormalize = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
+        // liquidateAmount = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
         require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
-        require(liquidateAmount > 0,"Lending Manager: Cant Pledge 0 amount");
+        require(liquidateAmountNormalize > 0,"Lending Manager: Cant Pledge 0 amount");
         
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
         uint amountLending = iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).balanceOf(user);
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
-        require( amountLending >= liquidateAmount,"Lending Manager: amountLending >= liquidateAmount");//Ensure that the liquidation quantity does not exceed the balance of the assets of the liquidated users
+        require( amountLending >= liquidateAmountNormalize,"Lending Manager: amountLending >= liquidateAmountNormalize");//Ensure that the liquidation quantity does not exceed the balance of the assets of the liquidated users
 
-        usedAmount = liquidateAmount * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;//Convert liquidation amount to liquidation amount * price
+        usedAmount = liquidateAmountNormalize * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;//Convert liquidation amount to liquidation amount * price
         usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
                                   (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
         require( amountDeposit >= usedAmount,"Lending Manager: amountDeposit >= usedAmount");//Ensure that the number of deposited tokens deducted from liquidationPenalty by users is not greater than their outstanding debts
+        
+        usedAmount = usedAmount * iDecimals(depositToken).decimals() / 1 ether;
 
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); //
         IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
@@ -626,5 +622,7 @@ contract lendingManager  {
             maxAmounts[1] = amountDeposit;
             
         }
+        // maxAmounts[0] = maxAmounts[0] * iDecimals(depositToken).decimals() / 1 ether;
+        // maxAmounts[1] = maxAmounts[1] * iDecimals(depositToken).decimals() / 1 ether;
     }
 }

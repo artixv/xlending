@@ -27,9 +27,9 @@ contract lendingInterface  {
         return iLendingManager(lendingManager).viewUsersHealthFactor(user);
     }
 
-    function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty){
-        return iLendingManager(lendingManager).assetsLiqPenaltyInfo( token);
-    }
+    // function assetsLiqPenaltyInfo(address token) external view returns(uint liqPenalty){
+    //     return iLendingManager(lendingManager).assetsLiqPenaltyInfo( token);
+    // }
 
     function assetsDepositAndLendAddrs(address token) public view returns (address[2] memory depositAndLend){
         return iLendingManager(lendingManager).assetsDepositAndLendAddrs( token);
