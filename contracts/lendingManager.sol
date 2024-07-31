@@ -108,6 +108,7 @@ contract lendingManager  {
                                  uint latestDepositInterest, 
                                  uint latestLoanInterest, 
                                  uint latestTimeStamp);
+    event BadDebtDeduction(address user,uint blockTimestamp);
     //------------------------------------------------------------------
 
     constructor() {
@@ -558,6 +559,7 @@ contract lendingManager  {
             iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
             iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
         }
+        emit BadDebtDeduction(user,block.timestamp);
     }
 
     //------------------------------ Liquidate Function------------------------------
@@ -570,7 +572,11 @@ contract lendingManager  {
         // liquidateAmount = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
-        require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
+        if(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100){
+            badDebtDeduction(user);
+            return 0;
+        }
+        // require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
         require(liquidateAmountNormalize > 0,"Lending Manager: Cant Pledge 0 amount");
         
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
@@ -626,7 +632,7 @@ contract lendingManager  {
             maxAmounts[1] = amountDeposit;
             
         }
-        // maxAmounts[0] = maxAmounts[0] * iDecimals(depositToken).decimals() / 1 ether;
-        // maxAmounts[1] = maxAmounts[1] * iDecimals(depositToken).decimals() / 1 ether;
+        maxAmounts[0] = maxAmounts[0] * iDecimals(depositToken).decimals() / 1 ether;
+        maxAmounts[1] = maxAmounts[1] * iDecimals(depositToken).decimals() / 1 ether;
     }
 }
