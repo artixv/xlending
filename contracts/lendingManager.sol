@@ -576,18 +576,20 @@ contract lendingManager  {
         uint amountDeposit = iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).balanceOf(user);
         require( amountLending >= liquidateAmountNormalize,"Lending Manager: amountLending >= liquidateAmountNormalize");//Ensure that the liquidation quantity does not exceed the balance of the assets of the liquidated users
 
-        usedAmount = liquidateAmountNormalize * iSlcOracle(oracleAddr).getPrice(liquidateToken) / 1 ether;//Convert liquidation amount to liquidation amount * price
-        usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty) * 1 ether / 
-                                  (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
+        usedAmount = liquidateAmountNormalize * iSlcOracle(oracleAddr).getPrice(liquidateToken);//Convert liquidation amount to liquidation amount * price
+        usedAmount = usedAmount * (UPPER_SYSTEM_LIMIT - licensedAssets[liquidateToken].liquidationPenalty)
+                                / (UPPER_SYSTEM_LIMIT * iSlcOracle(oracleAddr).getPrice(depositToken));//Convert the settlement amount into the number of user debt tokens, and deduct the user incentive for liquidationPenalty here
         require( amountDeposit >= usedAmount,"Lending Manager: amountDeposit >= usedAmount");//Ensure that the number of deposited tokens deducted from liquidationPenalty by users is not greater than their outstanding debts
+        
+        iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmountNormalize);
+        iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).burnCoin(user,usedAmount);
         
         usedAmount = usedAmount * iDecimals(depositToken).decimals() / 1 ether;
 
-        iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount); //
+        iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount);
         IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
         IERC20(liquidateToken).transferFrom(lendingVault, msg.sender, liquidateAmount);
-        iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmount);
-        iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).burnCoin(user,usedAmount);
+        
         _assetsValueUpdate(liquidateToken);
         _assetsValueUpdate(depositToken);
         emit AssetsDeposit(liquidateToken, liquidateAmount, user);
