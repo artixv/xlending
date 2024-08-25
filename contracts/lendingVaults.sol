@@ -3,8 +3,8 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/iDepositOrLoanCoin.sol";
 import "./interfaces/iLendingManager.sol";
 
@@ -14,6 +14,8 @@ contract lendingVaults  {
     address public setter;
     address newsetter;
     address public rebalancer;
+
+    using SafeERC20 for IERC20;
 
     constructor() {
         setter = msg.sender;
@@ -60,7 +62,7 @@ contract lendingVaults  {
     }
 
     function vaultsERC20Approve(address ERC20Addr,uint amount) external onlyManager{
-        IERC20(ERC20Addr).approve(lendingManager,amount);
+        IERC20(ERC20Addr).safeIncreaseAllowance(lendingManager,amount);
     }
 
     function transferNativeToken(address _to) external onlySetter{

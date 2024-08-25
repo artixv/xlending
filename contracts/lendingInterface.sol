@@ -2,7 +2,8 @@
 // First Release Time : 2024.07.30
 
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/iLendingManager.sol";
 import "./interfaces/iwxcfx.sol";
 import "./interfaces/islcoracle.sol";
@@ -11,6 +12,8 @@ contract lendingInterface  {
     address public lendingManager;
     address public wcfx;
     address public oracleAddr;
+
+    using SafeERC20 for IERC20;
 
     constructor(address _lendingManager, address _wcfx, address _oracleAddr) {
         lendingManager = _lendingManager;
@@ -345,18 +348,18 @@ contract lendingInterface  {
     }
     //  Assets Deposit
     function assetsDeposit(address tokenAddr, uint amount) external{
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(tokenAddr).approve(lendingManager, amount);
         iLendingManager(lendingManager).assetsDeposit(tokenAddr, amount, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     // Withdrawal of deposits
     function withdrawDeposit(address tokenAddr, uint amount) external{
         iLendingManager(lendingManager).withdrawDeposit( tokenAddr, amount, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     function withdrawDepositMax(address tokenAddr) external{
@@ -364,33 +367,33 @@ contract lendingInterface  {
         uint tokenBalance = IERC20(depositAndLend[0]).balanceOf(address(msg.sender));
         iLendingManager(lendingManager).withdrawDeposit( tokenAddr, tokenBalance, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     // lend Asset
     function lendAsset(address tokenAddr, uint amount) external{
         iLendingManager(lendingManager).lendAsset( tokenAddr, amount, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     // repay Loan
     function repayLoan(address tokenAddr,uint amount) external{
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(tokenAddr).approve(lendingManager, amount);
         iLendingManager(lendingManager).repayLoan( tokenAddr, amount, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     function repayLoanMax(address tokenAddr) external{
         address[2] memory depositAndLend = assetsDepositAndLendAddrs(tokenAddr);
         uint tokenBalance = IERC20(depositAndLend[1]).balanceOf(address(msg.sender));
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),tokenBalance);
         IERC20(tokenAddr).approve(lendingManager, tokenBalance);
         iLendingManager(lendingManager).repayLoan( tokenAddr, tokenBalance, msg.sender);
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     //-----------------------------------------Operation 2 can use CFX---------------------------------------------
@@ -401,7 +404,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).deposit{value:amount}();
         }else{
             require(msg.value == 0,"Lending Interface: msg.value should == 0");
-            IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+            IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         }
         
         IERC20(tokenAddr).approve(lendingManager, amount);
@@ -410,7 +413,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver
@@ -425,7 +428,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver
@@ -441,7 +444,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver
@@ -455,7 +458,7 @@ contract lendingInterface  {
         if(IERC20(wcfx).balanceOf(address(this))>0){
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }else if(IERC20(tokenAddr).balanceOf(address(this)) > 0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver
@@ -470,7 +473,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).deposit{value:amount}();
         }else{
             require(msg.value == 0,"Lending Interface: msg.value should == 0");
-            IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+            IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         }
         IERC20(tokenAddr).approve(lendingManager, amount);
         iLendingManager(lendingManager).repayLoan( tokenAddr, amount, msg.sender);
@@ -478,7 +481,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver
@@ -494,7 +497,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).deposit{value:tokenBalance}();
         }else{
             require(msg.value == 0,"Lending Interface: msg.value should == 0");
-            IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
+            IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),tokenBalance);
         }
         // IERC20(tokenAddr).transferFrom(msg.sender,address(this),tokenBalance);
         IERC20(tokenAddr).approve(lendingManager, tokenBalance);
@@ -503,7 +506,7 @@ contract lendingInterface  {
             iwxCFX(wcfx).withdraw(IERC20(wcfx).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
         if(address(this).balance>0){
             address payable receiver = payable(msg.sender); // Set receiver

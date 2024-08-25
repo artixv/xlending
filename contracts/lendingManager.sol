@@ -3,7 +3,8 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ixinterface.sol";
 import "./interfaces/islcoracle.sol";
 import "./interfaces/iDecimals.sol";
@@ -14,6 +15,8 @@ import "./interfaces/iLendingCoreAlgorithm.sol";
 import "./interfaces/iLendingVaults.sol";
 
 contract lendingManager  {
+    using SafeERC20 for IERC20;
+
     uint public constant ONE_YEAR = 31536000;
     uint public constant UPPER_SYSTEM_LIMIT = 10000;
 
@@ -451,7 +454,8 @@ contract lendingManager  {
         }
 
         _beforeUpdate(tokenAddr);
-        IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,lendingVault,amount);
+        // IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).mintCoin(user,amountNormalize);
         _assetsValueUpdate(tokenAddr);
         emit AssetsDeposit(tokenAddr, amount, user);
@@ -469,7 +473,7 @@ contract lendingManager  {
 
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
         _beforeUpdate(tokenAddr);
-        IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
+        IERC20(tokenAddr).safeTransferFrom(lendingVault,msg.sender,amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).burnCoin(user,amountNormalize);
         _assetsValueUpdate(tokenAddr);
         
@@ -511,7 +515,7 @@ contract lendingManager  {
         _beforeUpdate(tokenAddr);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).mintCoin(user,amountNormalize);
         iLendingVaults(lendingVault).vaultsERC20Approve(tokenAddr, amount);
-        IERC20(tokenAddr).transferFrom(lendingVault,msg.sender,amount);
+        IERC20(tokenAddr).safeTransferFrom(lendingVault,msg.sender,amount);
         _assetsValueUpdate(tokenAddr);
 
         uint factor;
@@ -546,7 +550,7 @@ contract lendingManager  {
         }
         _beforeUpdate(tokenAddr);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][1]).burnCoin(user,amountNormalize);
-        IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,lendingVault,amount);
         _assetsValueUpdate(tokenAddr);
         emit RepayLoan(tokenAddr, amount, user);
     }
@@ -595,8 +599,8 @@ contract lendingManager  {
         usedAmount = usedAmount * iDecimals(depositToken).decimals() / 1 ether;
 
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount);
-        IERC20(depositToken).transferFrom(msg.sender, lendingVault, usedAmount);
-        IERC20(liquidateToken).transferFrom(lendingVault, msg.sender, liquidateAmount);
+        IERC20(depositToken).safeTransferFrom(msg.sender, lendingVault, usedAmount);
+        IERC20(liquidateToken).safeTransferFrom(lendingVault, msg.sender, liquidateAmount);
         
         _assetsValueUpdate(liquidateToken);
         _assetsValueUpdate(depositToken);
