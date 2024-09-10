@@ -54,7 +54,7 @@ contract lendingManager  {
         address assetAddr;             
         uint    maximumLTV;               // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount 
                                           // for a home against the value of that property.(MAX = UPPER_SYSTEM_LIMIT) 
-        uint    liquidationPenalty;       // MAX = UPPER_SYSTEM_LIMIT ,default is 500(5%)
+        uint    liquidationPenalty;       // MAX = UPPER_SYSTEM_LIMIT/5 ,default is 500(5%)
         uint    bestLendingRatio;         // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 9000
         uint    bestDepositInterestRate ; // MAX = UPPER_SYSTEM_LIMIT , setting NOT more than 1000
         uint    maxLendingAmountInRIM;    // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
