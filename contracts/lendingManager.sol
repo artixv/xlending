@@ -440,7 +440,7 @@ contract lendingManager  {
 
     //  Assets Deposit
     function assetsDeposit(address tokenAddr, uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        uint amountNormalize = amount * 1 ether / (10**iDecimals(tokenAddr).decimals());
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
@@ -464,7 +464,7 @@ contract lendingManager  {
 
     // Withdrawal of deposits
     function withdrawDeposit(address tokenAddr, uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        uint amountNormalize = amount * 1 ether / (10**iDecimals(tokenAddr).decimals());
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
@@ -490,7 +490,7 @@ contract lendingManager  {
 
     // lend Asset
     function lendAsset(address tokenAddr, uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        uint amountNormalize = amount * 1 ether / (10**iDecimals(tokenAddr).decimals());
 
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
@@ -531,7 +531,7 @@ contract lendingManager  {
 
     // repay Loan
     function repayLoan(address tokenAddr,uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        uint amountNormalize = amount * 1 ether / (10**iDecimals(tokenAddr).decimals());
 
         if(lendingInterface != msg.sender){
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
