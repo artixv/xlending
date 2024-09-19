@@ -572,7 +572,7 @@ contract lendingManager  {
                             address liquidateToken,
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
-        uint liquidateAmountNormalize = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
+        uint liquidateAmountNormalize = liquidateAmount * 1 ether / (10**iDecimals(liquidateToken).decimals());
         // liquidateAmount = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
@@ -596,7 +596,7 @@ contract lendingManager  {
         iDepositOrLoanCoin(assetsDepositAndLend[liquidateToken][0]).burnCoin(user,liquidateAmountNormalize);
         iDepositOrLoanCoin(assetsDepositAndLend[depositToken][1]).burnCoin(user,usedAmount);
         
-        usedAmount = usedAmount * iDecimals(depositToken).decimals() / 1 ether;
+        usedAmount = usedAmount * (10**iDecimals(depositToken).decimals()) / 1 ether;
 
         iLendingVaults(lendingVault).vaultsERC20Approve(liquidateToken, liquidateAmount);
         IERC20(depositToken).safeTransferFrom(msg.sender, lendingVault, usedAmount);
@@ -636,7 +636,7 @@ contract lendingManager  {
             maxAmounts[1] = amountDeposit;
             
         }
-        maxAmounts[0] = maxAmounts[0] * iDecimals(depositToken).decimals() / 1 ether;
-        maxAmounts[1] = maxAmounts[1] * iDecimals(depositToken).decimals() / 1 ether;
+        maxAmounts[0] = maxAmounts[0] * (10**iDecimals(depositToken).decimals()) / 1 ether;
+        maxAmounts[1] = maxAmounts[1] * (10**iDecimals(depositToken).decimals()) / 1 ether;
     }
 }
