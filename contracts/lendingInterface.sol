@@ -177,7 +177,7 @@ contract lendingInterface  {
         uint _amountLending;
         uint8 _userMode = iLendingManager(lendingManager).userMode(user);
         (_amountDeposit,_amountLending) = iLendingManager(lendingManager).userDepositAndLendingValue( user);
-        if(_userMode>1){
+        if(_userMode <= 1){
             userLendableLimit = _amountDeposit * 1 ether / nomalFloorOfHealthFactor() - _amountLending;
         }else{
             userLendableLimit = _amountDeposit * 1 ether / homogeneousFloorOfHealthFactor() - _amountLending;
