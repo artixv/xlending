@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
-// First Release Time : 2024.07.30
+// First Release Time : 2024.09.30
 
 pragma solidity 0.8.6;
 
@@ -46,7 +46,7 @@ contract lendingManager  {
     //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6   1e6
     //bestLendingRatio:      80%  76%   76%  70%  70%  65%  65%   65%  50%  50%   40%
     //lendingModeNum:         2     2     2    4    5    3    3     3    1    1    1
-    //homogeneousModeLTV:    97%  97%   97%  88%  85%  95%  95%   95%  55%  55%   45%
+    //homogeneousModeLTV:    97%  97%   97%  95%  95%  95%  95%   95%  95%  55%   45%
     //bestDepositInterestRate 4%   4%    4%  4.5% 4.6%  5.2% 5.2%  5.2% 6%   6%  6.2% 
 
 
