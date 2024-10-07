@@ -79,7 +79,7 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         uint addTokens;
         require(_value > 0,"Deposit Or Loan Coin: Input value MUST > 0");
 
-        addTokens = iLendingManager(manager).getCoinValues(address(this))[depositOrLoan];
+        addTokens = iLendingManager(manager).getCoinValues(OCoin)[depositOrLoan];
 
         addTokens = _value * 1 ether / addTokens;
         userOQCAmount[_account] += addTokens;
@@ -98,9 +98,12 @@ contract depositOrLoanCoin is ERC20NoTransfer {
         require(_value > 0,"Deposit Or Loan Coin: Con't burn 0");
         require(_value <= balanceOf(_account),"Deposit Or Loan Coin: Must <= account balance");
 
-        burnTokens = iLendingManager(manager).getCoinValues(address(this))[depositOrLoan];
+        burnTokens = iLendingManager(manager).getCoinValues(OCoin)[depositOrLoan];
 
         burnTokens = _value * 1 ether / burnTokens;
+        if(userOQCAmount[_account] - burnTokens == 1){
+            burnTokens += 1;
+        }
         if(userOQCAmount[_account] - burnTokens > 0){
             userOQCAmount[_account] -= burnTokens;
         }else{

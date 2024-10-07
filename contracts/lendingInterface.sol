@@ -161,7 +161,7 @@ contract lendingInterface  {
         }
         if(_amountLending > 0){
             userHealthFactor = _amountDeposit * 1 ether / _amountLending;
-        }else if(_amountDeposit > 0){
+        }else if(_amountDeposit >= 0){
             userHealthFactor = 1000 ether;
         }else{
             userHealthFactor = 0 ether;
