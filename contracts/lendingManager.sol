@@ -106,7 +106,6 @@ contract lendingManager  {
     event UserModeSetting(address indexed user,uint8 _mode,address _userRIMAssetsAddress);
     event LendingInterfaceSetup(address indexed _interface);
     event FloorOfHealthFactorSetup(uint nomal, uint homogeneous);
-    // event SlcValue(address indexed slc, uint value);
     event DepositAndLoanInterest(address indexed token, 
                                  uint latestDepositInterest, 
                                  uint latestLoanInterest, 
@@ -122,11 +121,6 @@ contract lendingManager  {
         homogeneousFloorOfHealthFactor = 1.03 ether;
     }
 
-    // Evaluate the value of superLibraCoin
-    // function slcValueRevaluate(uint newValue) public  onlySetter {
-    //     slcValue = newValue;
-    //     emit SlcValue(superLibraCoin,newValue);
-    // }
     function setBadDebtCollectionAddress(address _badDebtCollectionAddress) external onlySetter{
         badDebtCollectionAddress = _badDebtCollectionAddress;
     }
@@ -143,7 +137,6 @@ contract lendingManager  {
     }
     
     function setup( address _superLibraCoin,
-                    // address _xInterface,
                     address _coinFactory,
                     address _lendingVault,
                     address _riskIsolationModeAcceptAssets,
@@ -151,7 +144,6 @@ contract lendingManager  {
                     address _oracleAddr ) external onlySetter{
         superLibraCoin = _superLibraCoin;
         coinFactory = _coinFactory;
-        // xInterface = _xInterface;
         oracleAddr = _oracleAddr;
         lendingVault = _lendingVault;
         coreAlgorithm = _coreAlgorithm;
@@ -243,7 +235,7 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(_userTotalLendingValue(user) == 0 && _userTotalDepositValue(user) == 0,"Lending Manager: should return all Lending Assets and withdraw all Deposit Assets.");
-        // require(_userTotalDepositValue(user) == 0,"Lending Manager: Cant Change Mode before withdraw all Deposit Assets.");
+
         if(_mode == 1){
             require(licensedAssets[_userRIMAssetsAddress].maxLendingAmountInRIM > 0,"Lending Manager: Mode 1 Need a RIMAsset.");
         }
@@ -455,7 +447,6 @@ contract lendingManager  {
 
         _beforeUpdate(tokenAddr);
         IERC20(tokenAddr).safeTransferFrom(msg.sender,lendingVault,amount);
-        // IERC20(tokenAddr).transferFrom(msg.sender,lendingVault,amount);
         iDepositOrLoanCoin(assetsDepositAndLend[tokenAddr][0]).mintCoin(user,amountNormalize);
         _assetsValueUpdate(tokenAddr);
         emit AssetsDeposit(tokenAddr, amount, user);
@@ -496,9 +487,7 @@ contract lendingManager  {
             require(user == msg.sender,"Lending Manager: Not slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"Lending Manager: Cant Pledge 0 amount");
-        // if(userMode[user] == 0){
-        //     require(licensedAssets[tokenAddr].maxLendingAmountInRIM == 0,"Lending Manager: Wrong Token in Risk Isolation Mode");
-        // }else 
+
         if(userMode[user] == 1){
             require(tokenAddr == riskIsolationModeAcceptAssets,"Lending Manager: Wrong Token in Risk Isolation Mode");
             riskIsolationModeLendingNetAmount[tokenAddr] = riskIsolationModeLendingNetAmount[tokenAddr] 
@@ -573,14 +562,12 @@ contract lendingManager  {
                             uint    liquidateAmount, 
                             address depositToken) public returns(uint usedAmount) {
         uint liquidateAmountNormalize = liquidateAmount * 1 ether / (10**iDecimals(liquidateToken).decimals());
-        // liquidateAmount = liquidateAmount * 1 ether / iDecimals(liquidateToken).decimals();
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
         if(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100){
             badDebtDeduction(user);
             return 0;
         }
-        // require(_userTotalDepositValue(user) > _userTotalLendingValue(user)*102/100,"Lending Manager: Require users not bad debt.");
         require(liquidateAmountNormalize > 0,"Lending Manager: Cant Pledge 0 amount");
         
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");
