@@ -41,8 +41,8 @@ contract lendingManager  {
     address public badDebtCollectionAddress;
 
     //  Assets Init:        SLC  USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs  XUN
-    //  MaximumLTV:         96%   95%   95%  88%  85%  65%  65%   75%  55%  55%   45%
-    //  LiqPenalty:          3%    4%    4%   5%   5%   5%   5%    5%   5%   5%    6%
+    //  MaximumLTV:         96%   95%   95%  85%  80%  65%  65%   70%  55%  55%   45%
+    //  LiqPenalty:          2%    3%    3%   4%   4%   5%   5%    5%   5%   5%    6%
     //maxLendingAmountInRIM:  0    0     0    0    0    0    0      0  1e6  1e6   1e6
     //bestLendingRatio:      80%  76%   76%  70%  70%  65%  65%   65%  50%  50%   40%
     //lendingModeNum:         2     2     2    4    5    3    3     3    1    1    1
@@ -169,7 +169,8 @@ contract lendingManager  {
                                     uint _bestLendingRatio, 
                                     uint8 _lendingModeNum,
                                     uint _homogeneousModeLTV,
-                                    uint _bestDepositInterestRate) public onlySetter {
+                                    uint _bestDepositInterestRate,
+                                    bool _isNew) public onlySetter {
         require(   _maxLTV < UPPER_SYSTEM_LIMIT
                 && _liqPenalty <= UPPER_SYSTEM_LIMIT/5
                 && _bestLendingRatio < UPPER_SYSTEM_LIMIT
@@ -178,7 +179,13 @@ contract lendingManager  {
                 && _bestDepositInterestRate < UPPER_SYSTEM_LIMIT,"Lending Manager: Exceed UPPER_SYSTEM_LIMIT");
         require(licensedAssets[_asset].assetAddr == address(0),"Lending Manager: Asset already registered!");
         assetsSerialNumber.push(_asset);
-        require(assetsSerialNumber.length < 50,"Lending Manager: Too Much assets");
+        if(_isNew){
+            assetsDepositAndLend[_asset] = iCoinFactory(coinFactory).createDeAndLoCoin(_asset);
+        }else{
+            assetsDepositAndLend[_asset][0] = iCoinFactory(coinFactory).getDepositCoin(_asset);
+            assetsDepositAndLend[_asset][1] = iCoinFactory(coinFactory).getLoanCoin(_asset);
+        }
+        require(assetsSerialNumber.length < 50,"Lending Manager: assets can't exceed 50");
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = _maxLTV;
         licensedAssets[_asset].liquidationPenalty = _liqPenalty;
@@ -187,7 +194,7 @@ contract lendingManager  {
         licensedAssets[_asset].lendingModeNum = _lendingModeNum;
         licensedAssets[_asset].homogeneousModeLTV = _homogeneousModeLTV;
         licensedAssets[_asset].bestDepositInterestRate = _bestDepositInterestRate;
-        assetsDepositAndLend[_asset] = iCoinFactory(coinFactory).createDeAndLoCoin(_asset);
+        
         emit LicensedAssetsSetup(_asset, 
                                  _maxLTV, 
                                  _liqPenalty,
@@ -206,7 +213,7 @@ contract lendingManager  {
                                 uint8 _lendingModeNum,
                                 uint _homogeneousModeLTV,
                                 uint _bestDepositInterestRate) public onlySetter {
-        require(licensedAssets[_asset].assetAddr == _asset,"Lending Manager: asset is Not registered!");
+        require(licensedAssets[_asset].assetAddr == _asset ,"Lending Manager: asset is Not registered!");
         require(   _maxLTV < UPPER_SYSTEM_LIMIT
                 && _liqPenalty <= UPPER_SYSTEM_LIMIT/5
                 && _bestLendingRatio < UPPER_SYSTEM_LIMIT
@@ -514,6 +521,8 @@ contract lendingManager  {
         }else{
             require( factor >= nomalFloorOfHealthFactor,"Your Health Factor <= nomal Floor Of Health Factor, Cant redeem assets");
         }
+        // assetsDepositAndLend[token]
+        require(IERC20(assetsDepositAndLend[tokenAddr][0]).totalSupply() * 99 / 100 >= IERC20(assetsDepositAndLend[tokenAddr][1]).totalSupply(),"Lending Manager: total amount borrowed can t exceeds 99% of the deposit");
         emit LendAsset(tokenAddr, amount, user);
     
     }
@@ -547,10 +556,18 @@ contract lendingManager  {
     function badDebtDeduction(address user) public {
         require(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100,"Lending Manager: should be bad debt.");
         for(uint i=0;i<assetsSerialNumber.length;i++){
-            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
-            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
-            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
-            iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
+            if(IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)>0){
+                iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
+            }
+            if(IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)>0){
+                iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).mintCoin(badDebtCollectionAddress,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
+            }
+            if(IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user)>0){
+                iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][0]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][0]).balanceOf(user));
+            }
+            if(IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user)>0){
+                iDepositOrLoanCoin(assetsDepositAndLend[assetsSerialNumber[i]][1]).burnCoin(user,IERC20(assetsDepositAndLend[assetsSerialNumber[i]][1]).balanceOf(user));
+            } 
         }
         emit BadDebtDeduction(user,block.timestamp);
     }
@@ -564,10 +581,10 @@ contract lendingManager  {
         uint liquidateAmountNormalize = liquidateAmount * 1 ether / (10**iDecimals(liquidateToken).decimals());
         _beforeUpdate(liquidateToken);
         _beforeUpdate(depositToken);
-        if(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100){
-            badDebtDeduction(user);
-            return 0;
-        }
+        // if(_userTotalDepositValue(user) <= _userTotalLendingValue(user)*102/100){
+        //     badDebtDeduction(user);
+        //     return 0;
+        // }
         require(liquidateAmountNormalize > 0,"Lending Manager: Cant Pledge 0 amount");
         
         require(viewUsersHealthFactor(user) < 1 ether,"Lending Manager: Users Health Factor Need < 1 ether");

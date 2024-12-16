@@ -54,13 +54,13 @@ contract lendingCoreAlgorithm  {
         uint bestLendingRatio = info[1];
         if(lendingRatio <= bestLendingRatio + 500){
             _rate = (info[3] * lendingRatio / bestLendingRatio) * lendingRatio / bestLendingRatio;
-        }else if(lendingRatio <= 9500){
+        }else if(lendingRatio <= 9400){
             _rate = (info[3] * lendingRatio / bestLendingRatio) * lendingRatio / bestLendingRatio
                   * (lendingRatio - bestLendingRatio)  / 500;
         }else if(lendingRatio <= 10000){
             _rate = (info[3] * lendingRatio / bestLendingRatio) * lendingRatio / bestLendingRatio
                   * (lendingRatio - bestLendingRatio)  / 500
-                  * (lendingRatio - 9400) / 100;
+                  * (lendingRatio - 9300) / 100;
         }
     }
     function lendingInterestRate(address token,uint lendingRatio) public view returns(uint _rate){
@@ -68,14 +68,14 @@ contract lendingCoreAlgorithm  {
         (info[0],info[1],info[2],info[3]) = assetsBaseInfo(token);
         uint bestLendingRatio = info[1];
         if(lendingRatio <= bestLendingRatio + 500){
-            _rate = (info[3] * lendingRatio / bestLendingRatio) * 10500 / bestLendingRatio * 10000 / info[0] ;
-        }else if(lendingRatio <= 9500){
-            _rate = (info[3] * lendingRatio / bestLendingRatio) * 10500 / bestLendingRatio * 10000 / info[0]
+            _rate = (info[3] * lendingRatio / bestLendingRatio) * 11000 / bestLendingRatio ;//* 10000 / info[0] ;
+        }else if(lendingRatio <= 9400){
+            _rate = (info[3] * lendingRatio / bestLendingRatio) * 11000 / bestLendingRatio  //* 10000 / info[0]
                   * (lendingRatio - bestLendingRatio)  / 500 * lendingRatio / (bestLendingRatio +500);
         }else if(lendingRatio <= 10000){
-            _rate = (info[3] * lendingRatio / bestLendingRatio) * 10500 / bestLendingRatio * 10000 / info[0]
+            _rate = (info[3] * lendingRatio / bestLendingRatio) * 11000 / bestLendingRatio  //* 10000 / info[0]
                   * (lendingRatio - bestLendingRatio)  / 500 * lendingRatio / (bestLendingRatio +500)
-                  * (lendingRatio - 9400) * (lendingRatio - 9400)/ 10000;
+                  * (lendingRatio - 9300) * (lendingRatio - 9300)/ 10000;
         }
     }
 

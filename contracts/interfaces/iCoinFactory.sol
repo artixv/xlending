@@ -3,4 +3,6 @@
 pragma solidity 0.8.6;
 interface iCoinFactory{
     function createDeAndLoCoin(address token) external returns (address[2] memory _pAndLCoin) ;
+    function getDepositCoin(address) external returns (address) ;
+    function getLoanCoin(address) external returns (address) ;
 }

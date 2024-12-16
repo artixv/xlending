@@ -7,7 +7,7 @@ interface iLendingCoreAlgorithm  {
     
     function assetsValueUpdate(address token) external view returns(uint[2] memory latestInterest);
 
-    function depositInterestRate(address token,uint bestLendingRatio,uint lendingRatio) external view returns(uint _rate);
-    function lendingInterestRate(address token,uint bestLendingRatio,uint lendingRatio) external view returns(uint _rate);
+    function depositInterestRate(address token,uint lendingRatio) external view returns(uint _rate);
+    function lendingInterestRate(address token,uint lendingRatio) external view returns(uint _rate);
 
 }
